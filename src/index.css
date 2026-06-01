@@ -1,0 +1,153 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html, body, #root {
+  height: 100%;
+  overflow: hidden;
+}
+
+/* xterm.js overrides for dark theme */
+.xterm {
+  height: 100%;
+  padding: 8px;
+}
+
+.xterm-viewport::-webkit-scrollbar {
+  width: 6px;
+}
+
+.xterm-viewport::-webkit-scrollbar-track {
+  background: #1e293b;
+}
+
+.xterm-viewport::-webkit-scrollbar-thumb {
+  background: #475569;
+  border-radius: 3px;
+}
+
+/* Custom scrollbar for the app */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #475569;
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #64748b;
+}
+
+/* Prevent text selection on UI elements */
+.no-select {
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* Command card styles */
+.command-card {
+  @apply bg-card-bg rounded-lg p-4 cursor-pointer transition-colors duration-150 border border-divider;
+  min-width: 200px;
+}
+
+.command-card:hover {
+  @apply bg-card-hover border-primary/30;
+}
+
+.command-card:active {
+  @apply scale-[0.98];
+}
+
+/* Status indicator dots */
+.status-dot {
+  @apply inline-block rounded-full;
+  width: 8px;
+  height: 8px;
+}
+
+.status-dot.device {
+  @apply bg-success;
+}
+
+.status-dot.offline {
+  @apply bg-error;
+}
+
+.status-dot.unauthorized {
+  @apply bg-warning;
+}
+
+/* Button base */
+.btn {
+  @apply inline-flex items-center justify-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-colors duration-150 no-select;
+  height: 36px;
+}
+
+.btn-primary {
+  @apply bg-primary text-white hover:bg-blue-600 active:bg-blue-700;
+}
+
+.btn-secondary {
+  @apply bg-slate-700 text-text-primary hover:bg-slate-600 active:bg-slate-500;
+}
+
+.btn-ghost {
+  @apply text-text-secondary hover:bg-slate-700 hover:text-text-primary;
+}
+
+.btn:disabled {
+  @apply opacity-50 cursor-not-allowed;
+}
+
+/* Input styles */
+.input-field {
+  @apply bg-slate-800 border border-divider rounded-md px-3 py-2 text-sm text-text-primary placeholder:text-slate-500 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary;
+}
+
+.input-field.error {
+  @apply border-error focus:border-error focus:ring-error;
+}
+
+/* Dialog overlay */
+.dialog-overlay {
+  @apply fixed inset-0 z-50 flex items-center justify-center;
+  background: rgba(0, 0, 0, 0.6);
+}
+
+.dialog-content {
+  @apply bg-slate-800 border border-divider rounded-lg shadow-2xl;
+  max-width: 560px;
+  width: 90vw;
+}
+
+/* Toolbar */
+.toolbar {
+  @apply flex items-center gap-2 px-3;
+  height: 36px;
+}
+
+/* Sidebar group item */
+.sidebar-group-item {
+  @apply flex items-center gap-2 px-3 py-2 text-sm text-text-secondary cursor-pointer rounded-md transition-colors duration-150 no-select;
+}
+
+.sidebar-group-item:hover {
+  @apply bg-slate-700 text-text-primary;
+}
+
+.sidebar-group-item.active {
+  @apply bg-primary/20 text-primary;
+}

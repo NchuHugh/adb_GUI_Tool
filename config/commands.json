@@ -1,0 +1,614 @@
+{
+  "version": "1.0",
+  "groups": [
+    { "id": "device", "label": "设备管理", "icon": "Smartphone", "order": 1 },
+    { "id": "file", "label": "文件操作", "icon": "FolderOpen", "order": 2 },
+    { "id": "app", "label": "应用调试", "icon": "Package", "order": 3 },
+    { "id": "log", "label": "日志抓取", "icon": "ScrollText", "order": 4 },
+    { "id": "props", "label": "系统属性", "icon": "Settings", "order": 5 },
+    { "id": "network", "label": "网络调试", "icon": "Wifi", "order": 6 },
+    { "id": "shell", "label": "Shell 快捷", "icon": "Terminal", "order": 7 }
+  ],
+  "commands": [
+    {
+      "id": "adb_root",
+      "groupId": "device",
+      "label": "ADB Root",
+      "description": "以 root 权限重启 adbd，需设备已解锁",
+      "template": "adb root",
+      "params": [],
+      "outputMode": "stream",
+      "timeout": 10000,
+      "tags": ["root", "device"]
+    },
+    {
+      "id": "adb_unroot",
+      "groupId": "device",
+      "label": "ADB Unroot",
+      "description": "取消 adbd 的 root 权限",
+      "template": "adb unroot",
+      "params": [],
+      "outputMode": "stream",
+      "timeout": 10000,
+      "tags": ["root", "device"]
+    },
+    {
+      "id": "adb_remount",
+      "groupId": "device",
+      "label": "Remount",
+      "description": "重新挂载系统分区为可读写",
+      "template": "adb remount",
+      "params": [],
+      "outputMode": "stream",
+      "timeout": 10000,
+      "tags": ["root", "device"]
+    },
+    {
+      "id": "adb_reboot",
+      "groupId": "device",
+      "label": "重启设备",
+      "description": "重启 Android 设备",
+      "template": "adb reboot",
+      "params": [],
+      "outputMode": "once",
+      "timeout": 30000,
+      "tags": ["device", "reboot"]
+    },
+    {
+      "id": "adb_reboot_bootloader",
+      "groupId": "device",
+      "label": "重启到 Bootloader",
+      "description": "重启设备到 fastboot 模式",
+      "template": "adb reboot bootloader",
+      "params": [],
+      "outputMode": "once",
+      "timeout": 30000,
+      "tags": ["device", "reboot"]
+    },
+    {
+      "id": "adb_reboot_recovery",
+      "groupId": "device",
+      "label": "重启到 Recovery",
+      "description": "重启设备到恢复模式",
+      "template": "adb reboot recovery",
+      "params": [],
+      "outputMode": "once",
+      "timeout": 30000,
+      "tags": ["device", "reboot"]
+    },
+    {
+      "id": "adb_devices",
+      "groupId": "device",
+      "label": "查看设备列表",
+      "description": "列出所有连接的设备及详细信息",
+      "template": "adb devices -l",
+      "params": [],
+      "outputMode": "once",
+      "timeout": 5000,
+      "tags": ["device"]
+    },
+    {
+      "id": "adb_get_serialno",
+      "groupId": "device",
+      "label": "获取序列号",
+      "description": "显示当前连接设备的序列号",
+      "template": "adb get-serialno",
+      "params": [],
+      "outputMode": "once",
+      "timeout": 5000,
+      "tags": ["device"]
+    },
+    {
+      "id": "adb_wait_for_device",
+      "groupId": "device",
+      "label": "等待设备连接",
+      "description": "阻塞等待 USB 或网络设备连接",
+      "template": "adb wait-for-device",
+      "params": [],
+      "outputMode": "stream",
+      "timeout": 120000,
+      "tags": ["device"]
+    },
+    {
+      "id": "adb_connect",
+      "groupId": "device",
+      "label": "网络连接设备",
+      "description": "通过 TCP/IP 连接远程 Android 设备",
+      "template": "adb connect {host}:{port}",
+      "params": [
+        { "key": "host", "label": "主机地址", "type": "text", "required": true, "default": "", "placeholder": "192.168.1.100" },
+        { "key": "port", "label": "端口", "type": "text", "required": false, "default": "5555", "placeholder": "5555" }
+      ],
+      "outputMode": "stream",
+      "timeout": 10000,
+      "tags": ["device", "network"]
+    },
+    {
+      "id": "adb_disconnect",
+      "groupId": "device",
+      "label": "断开网络设备",
+      "description": "断开 TCP/IP 连接的远程设备",
+      "template": "adb disconnect {host}:{port}",
+      "params": [
+        { "key": "host", "label": "主机地址", "type": "text", "required": true, "default": "", "placeholder": "192.168.1.100" },
+        { "key": "port", "label": "端口", "type": "text", "required": false, "default": "5555", "placeholder": "5555" }
+      ],
+      "outputMode": "stream",
+      "timeout": 10000,
+      "tags": ["device", "network"]
+    },
+    {
+      "id": "adb_push",
+      "groupId": "file",
+      "label": "Push 文件",
+      "description": "将本地文件推送到设备指定路径",
+      "template": "adb push {src} {dst}",
+      "params": [
+        { "key": "src", "label": "本地文件路径", "type": "file", "required": true, "default": "", "placeholder": "选择文件..." },
+        { "key": "dst", "label": "设备目标路径", "type": "text", "required": true, "default": "/sdcard/", "placeholder": "/sdcard/Download/", "fillable": true }
+      ],
+      "outputMode": "stream",
+      "timeout": 120000,
+      "tags": ["file", "push"]
+    },
+    {
+      "id": "adb_pull",
+      "groupId": "file",
+      "label": "Pull 文件",
+      "description": "从设备拉取文件到本地",
+      "template": "adb pull {src} {dst}",
+      "params": [
+        { "key": "src", "label": "设备文件路径", "type": "text", "required": true, "default": "/sdcard/", "placeholder": "/sdcard/Download/file.apk", "fillable": true },
+        { "key": "dst", "label": "本地保存路径", "type": "directory", "required": true, "default": "", "placeholder": "选择目录..." }
+      ],
+      "outputMode": "stream",
+      "timeout": 120000,
+      "tags": ["file", "pull"]
+    },
+    {
+      "id": "adb_ls",
+      "groupId": "file",
+      "label": "列出目录",
+      "description": "列出设备上指定目录的文件列表",
+      "template": "adb shell ls -la {path}",
+      "params": [
+        { "key": "path", "label": "目标路径", "type": "text", "required": false, "default": "/sdcard/", "placeholder": "/sdcard/" }
+      ],
+      "outputMode": "once",
+      "timeout": 10000,
+      "tags": ["file"]
+    },
+    {
+      "id": "adb_rm",
+      "groupId": "file",
+      "label": "删除文件",
+      "description": "删除设备上的文件或目录（谨慎操作）",
+      "template": "adb shell rm -rf {path}",
+      "params": [
+        { "key": "path", "label": "目标路径", "type": "text", "required": true, "default": "", "placeholder": "/sdcard/Download/temp", "fillable": true }
+      ],
+      "outputMode": "once",
+      "timeout": 10000,
+      "tags": ["file", "delete"]
+    },
+    {
+      "id": "adb_mkdir",
+      "groupId": "file",
+      "label": "创建目录",
+      "description": "在设备上创建目录（含父目录）",
+      "template": "adb shell mkdir -p {path}",
+      "params": [
+        { "key": "path", "label": "目录路径", "type": "text", "required": true, "default": "", "placeholder": "/sdcard/Download/mydir" }
+      ],
+      "outputMode": "once",
+      "timeout": 5000,
+      "tags": ["file"]
+    },
+    {
+      "id": "adb_install",
+      "groupId": "app",
+      "label": "安装 APK",
+      "description": "安装 APK 到设备（覆盖安装）",
+      "template": "adb install -r {apk}",
+      "params": [
+        { "key": "apk", "label": "APK 文件", "type": "file", "required": true, "default": "", "placeholder": "选择 .apk 文件..." }
+      ],
+      "outputMode": "stream",
+      "timeout": 120000,
+      "tags": ["app", "install"]
+    },
+    {
+      "id": "adb_install_test",
+      "groupId": "app",
+      "label": "安装测试 APK",
+      "description": "安装带 android:testOnly 标记的测试 APK",
+      "template": "adb install -r -t {apk}",
+      "params": [
+        { "key": "apk", "label": "测试 APK 文件", "type": "file", "required": true, "default": "", "placeholder": "选择 .apk 文件..." }
+      ],
+      "outputMode": "stream",
+      "timeout": 120000,
+      "tags": ["app", "install", "test"]
+    },
+    {
+      "id": "adb_uninstall",
+      "groupId": "app",
+      "label": "卸载应用",
+      "description": "从设备卸载指定包名的应用",
+      "template": "adb uninstall {package}",
+      "params": [
+        { "key": "package", "label": "应用包名", "type": "text", "required": true, "default": "", "placeholder": "com.example.app", "fillable": true }
+      ],
+      "outputMode": "stream",
+      "timeout": 30000,
+      "tags": ["app", "uninstall"]
+    },
+    {
+      "id": "adb_pm_list_packages",
+      "groupId": "app",
+      "label": "列出所有包名",
+      "description": "列出设备上安装的所有应用包名",
+      "template": "adb shell pm list packages",
+      "params": [],
+      "outputMode": "once",
+      "timeout": 10000,
+      "tags": ["app", "packages"]
+    },
+    {
+      "id": "adb_pm_list_packages_3rd",
+      "groupId": "app",
+      "label": "列出第三方包名",
+      "description": "仅列出第三方（非系统）应用包名",
+      "template": "adb shell pm list packages -3",
+      "params": [],
+      "outputMode": "once",
+      "timeout": 10000,
+      "tags": ["app", "packages"]
+    },
+    {
+      "id": "adb_pm_path",
+      "groupId": "app",
+      "label": "获取 APK 路径",
+      "description": "查询指定包名对应的 APK 文件路径",
+      "template": "adb shell pm path {package}",
+      "params": [
+        { "key": "package", "label": "应用包名", "type": "text", "required": true, "default": "", "placeholder": "com.example.app", "fillable": true, "fillSourceCommandId": "adb_pm_list_packages" }
+      ],
+      "outputMode": "once",
+      "timeout": 5000,
+      "tags": ["app", "packages"]
+    },
+    {
+      "id": "adb_am_start",
+      "groupId": "app",
+      "label": "启动 Activity",
+      "description": "通过 am start 启动指定 Activity",
+      "template": "adb shell am start -n {component}",
+      "params": [
+        { "key": "component", "label": "组件名", "type": "text", "required": true, "default": "", "placeholder": "com.pkg/.MainActivity" }
+      ],
+      "outputMode": "once",
+      "timeout": 10000,
+      "tags": ["app", "activity"]
+    },
+    {
+      "id": "adb_am_force_stop",
+      "groupId": "app",
+      "label": "强制停止应用",
+      "description": "通过 am force-stop 强制停止应用",
+      "template": "adb shell am force-stop {package}",
+      "params": [
+        { "key": "package", "label": "应用包名", "type": "text", "required": true, "default": "", "placeholder": "com.example.app", "fillable": true }
+      ],
+      "outputMode": "once",
+      "timeout": 5000,
+      "tags": ["app"]
+    },
+    {
+      "id": "adb_am_clear_data",
+      "groupId": "app",
+      "label": "清除应用数据",
+      "description": "清除指定应用的所有数据（等同于设置中的清除数据）",
+      "template": "adb shell pm clear {package}",
+      "params": [
+        { "key": "package", "label": "应用包名", "type": "text", "required": true, "default": "", "placeholder": "com.example.app", "fillable": true }
+      ],
+      "outputMode": "once",
+      "timeout": 10000,
+      "tags": ["app"]
+    },
+    {
+      "id": "adb_dumpsys_activity",
+      "groupId": "app",
+      "label": "Dump Activity",
+      "description": "导出指定应用的 Activity 栈信息",
+      "template": "adb shell dumpsys activity {package}",
+      "params": [
+        { "key": "package", "label": "应用包名", "type": "text", "required": true, "default": "", "placeholder": "com.example.app", "fillable": true }
+      ],
+      "outputMode": "once",
+      "timeout": 10000,
+      "tags": ["app", "debug"]
+    },
+    {
+      "id": "adb_dumpsys_meminfo",
+      "groupId": "app",
+      "label": "内存信息",
+      "description": "导出指定应用的内存使用详情",
+      "template": "adb shell dumpsys meminfo {package}",
+      "params": [
+        { "key": "package", "label": "应用包名", "type": "text", "required": true, "default": "", "placeholder": "com.example.app", "fillable": true }
+      ],
+      "outputMode": "once",
+      "timeout": 10000,
+      "tags": ["app", "debug", "memory"]
+    },
+    {
+      "id": "adb_logcat",
+      "groupId": "log",
+      "label": "Logcat（全部）",
+      "description": "实时输出设备全部日志流（持续运行直至手动停止）",
+      "template": "adb logcat",
+      "params": [],
+      "outputMode": "stream",
+      "timeout": 0,
+      "tags": ["log", "stream"]
+    },
+    {
+      "id": "adb_logcat_tag",
+      "groupId": "log",
+      "label": "Logcat（按 Tag）",
+      "description": "仅显示指定 Tag 的日志",
+      "template": "adb logcat -s {tag}",
+      "params": [
+        { "key": "tag", "label": "日志 Tag", "type": "text", "required": true, "default": "", "placeholder": "MyApp" }
+      ],
+      "outputMode": "stream",
+      "timeout": 0,
+      "tags": ["log"]
+    },
+    {
+      "id": "adb_logcat_clear",
+      "groupId": "log",
+      "label": "清除 Logcat",
+      "description": "清除设备上的全部日志缓冲区",
+      "template": "adb logcat -c",
+      "params": [],
+      "outputMode": "once",
+      "timeout": 5000,
+      "tags": ["log"]
+    },
+    {
+      "id": "adb_logcat_package",
+      "groupId": "log",
+      "label": "Logcat（按 PID）",
+      "description": "仅显示指定包名对应进程的日志",
+      "template": "adb logcat --pid=$(adb shell pidof -s {package})",
+      "params": [
+        { "key": "package", "label": "应用包名", "type": "text", "required": true, "default": "", "placeholder": "com.example.app", "fillable": true }
+      ],
+      "outputMode": "stream",
+      "timeout": 0,
+      "tags": ["log"]
+    },
+    {
+      "id": "adb_bugreport",
+      "groupId": "log",
+      "label": "抓取 Bug Report",
+      "description": "生成设备完整 Bug Report 保存到本地",
+      "template": "adb bugreport {output}",
+      "params": [
+        { "key": "output", "label": "保存目录", "type": "directory", "required": true, "default": "", "placeholder": "选择保存目录..." }
+      ],
+      "outputMode": "stream",
+      "timeout": 120000,
+      "tags": ["log", "debug"]
+    },
+    {
+      "id": "adb_getprop",
+      "groupId": "props",
+      "label": "获取所有属性",
+      "description": "列出设备上所有系统属性",
+      "template": "adb shell getprop",
+      "params": [],
+      "outputMode": "once",
+      "timeout": 10000,
+      "tags": ["props"]
+    },
+    {
+      "id": "adb_getprop_key",
+      "groupId": "props",
+      "label": "获取指定属性",
+      "description": "获取指定 key 的 Device Build Properties 属性值",
+      "template": "adb shell getprop {key}",
+      "params": [
+        { "key": "key", "label": "属性名", "type": "text", "required": true, "default": "ro.build.version.release", "placeholder": "ro.build.version.release" }
+      ],
+      "outputMode": "once",
+      "timeout": 5000,
+      "tags": ["props"]
+    },
+    {
+      "id": "adb_setprop",
+      "groupId": "props",
+      "label": "设置属性",
+      "description": "设置指定的系统属性值",
+      "template": "adb shell setprop {key} {value}",
+      "params": [
+        { "key": "key", "label": "属性名", "type": "text", "required": true, "default": "", "placeholder": "debug.test" },
+        { "key": "value", "label": "属性值", "type": "text", "required": true, "default": "", "placeholder": "1" }
+      ],
+      "outputMode": "once",
+      "timeout": 5000,
+      "tags": ["props"]
+    },
+    {
+      "id": "adb_settings_get",
+      "groupId": "props",
+      "label": "获取 Settings",
+      "description": "获取系统 Settings 数据库中指定 key 的值",
+      "template": "adb shell settings get {namespace} {key}",
+      "params": [
+        { "key": "namespace", "label": "命名空间", "type": "select", "required": true, "default": "system", "options": ["system", "secure", "global"] },
+        { "key": "key", "label": "Key", "type": "text", "required": true, "default": "", "placeholder": "screen_brightness" }
+      ],
+      "outputMode": "once",
+      "timeout": 5000,
+      "tags": ["props", "settings"]
+    },
+    {
+      "id": "adb_settings_put",
+      "groupId": "props",
+      "label": "设置 Settings",
+      "description": "修改系统 Settings 数据库中指定 key 的值",
+      "template": "adb shell settings put {namespace} {key} {value}",
+      "params": [
+        { "key": "namespace", "label": "命名空间", "type": "select", "required": true, "default": "system", "options": ["system", "secure", "global"] },
+        { "key": "key", "label": "Key", "type": "text", "required": true, "default": "", "placeholder": "screen_brightness" },
+        { "key": "value", "label": "Value", "type": "text", "required": true, "default": "", "placeholder": "128" }
+      ],
+      "outputMode": "once",
+      "timeout": 5000,
+      "tags": ["props", "settings"]
+    },
+    {
+      "id": "adb_forward",
+      "groupId": "network",
+      "label": "端口转发",
+      "description": "将本地端口转发到设备端口（tcp）",
+      "template": "adb forward tcp:{local} tcp:{remote}",
+      "params": [
+        { "key": "local", "label": "本地端口", "type": "text", "required": true, "default": "8080", "placeholder": "8080" },
+        { "key": "remote", "label": "远程端口", "type": "text", "required": true, "default": "8080", "placeholder": "8080" }
+      ],
+      "outputMode": "once",
+      "timeout": 5000,
+      "tags": ["network", "forward"]
+    },
+    {
+      "id": "adb_forward_list",
+      "groupId": "network",
+      "label": "查看转发列表",
+      "description": "列出所有当前活动的端口转发",
+      "template": "adb forward --list",
+      "params": [],
+      "outputMode": "once",
+      "timeout": 5000,
+      "tags": ["network"]
+    },
+    {
+      "id": "adb_forward_remove",
+      "groupId": "network",
+      "label": "移除所有转发",
+      "description": "移除全部端口转发规则",
+      "template": "adb forward --remove-all",
+      "params": [],
+      "outputMode": "once",
+      "timeout": 5000,
+      "tags": ["network"]
+    },
+    {
+      "id": "adb_reverse",
+      "groupId": "network",
+      "label": "反向端口转发",
+      "description": "将设备端口反向转发到本地",
+      "template": "adb reverse tcp:{remote} tcp:{local}",
+      "params": [
+        { "key": "remote", "label": "远程端口", "type": "text", "required": true, "default": "", "placeholder": "8080" },
+        { "key": "local", "label": "本地端口", "type": "text", "required": true, "default": "", "placeholder": "8080" }
+      ],
+      "outputMode": "once",
+      "timeout": 5000,
+      "tags": ["network", "reverse"]
+    },
+    {
+      "id": "adb_tcpip",
+      "groupId": "network",
+      "label": "切换 TCP 模式",
+      "description": "将 USB 连接的设备切换到 TCP/IP 模式",
+      "template": "adb tcpip {port}",
+      "params": [
+        { "key": "port", "label": "端口", "type": "text", "required": false, "default": "5555", "placeholder": "5555" }
+      ],
+      "outputMode": "once",
+      "timeout": 10000,
+      "tags": ["network", "tcpip"]
+    },
+    {
+      "id": "adb_shell",
+      "groupId": "shell",
+      "label": "执行 Shell 命令",
+      "description": "在设备上执行任意 Shell 命令",
+      "template": "adb shell {cmd}",
+      "params": [
+        { "key": "cmd", "label": "Shell 命令", "type": "text", "required": true, "default": "", "placeholder": "ls /sdcard" }
+      ],
+      "outputMode": "stream",
+      "timeout": 30000,
+      "tags": ["shell"]
+    },
+    {
+      "id": "adb_screencap",
+      "groupId": "shell",
+      "label": "截图",
+      "description": "截取设备屏幕并保存到本地指定目录",
+      "template": "adb shell screencap /sdcard/screenshot.png && adb pull /sdcard/screenshot.png {dst}",
+      "params": [
+        { "key": "dst", "label": "保存目录", "type": "directory", "required": true, "default": "", "placeholder": "选择目录保存 screenshot.png" }
+      ],
+      "outputMode": "stream",
+      "timeout": 30000,
+      "tags": ["shell", "screenshot"]
+    },
+    {
+      "id": "adb_screenrecord",
+      "groupId": "shell",
+      "label": "录屏",
+      "description": "录制设备屏幕（按 Ctrl+C 停止，文件保存在 /sdcard/record.mp4）",
+      "template": "adb shell screenrecord /sdcard/record.mp4",
+      "params": [],
+      "outputMode": "stream",
+      "timeout": 0,
+      "tags": ["shell", "record"]
+    },
+    {
+      "id": "adb_input_text",
+      "groupId": "shell",
+      "label": "输入文本",
+      "description": "向设备输入文本（模拟键盘输入）",
+      "template": "adb shell input text \"{text}\"",
+      "params": [
+        { "key": "text", "label": "文本内容", "type": "text", "required": true, "default": "", "placeholder": "Hello World" }
+      ],
+      "outputMode": "once",
+      "timeout": 5000,
+      "tags": ["shell", "input"]
+    },
+    {
+      "id": "adb_input_keyevent",
+      "groupId": "shell",
+      "label": "发送按键",
+      "description": "向设备发送按键事件（返回、Home 等）",
+      "template": "adb shell input keyevent {keycode}",
+      "params": [
+        {
+          "key": "keycode",
+          "label": "按键码",
+          "type": "select",
+          "required": true,
+          "default": "KEYCODE_HOME",
+          "options": [
+            "KEYCODE_HOME", "KEYCODE_BACK", "KEYCODE_MENU", "KEYCODE_POWER",
+            "KEYCODE_WAKEUP", "KEYCODE_VOLUME_UP", "KEYCODE_VOLUME_DOWN",
+            "KEYCODE_ENTER", "KEYCODE_DEL", "KEYCODE_TAB",
+            "KEYCODE_DPAD_UP", "KEYCODE_DPAD_DOWN", "KEYCODE_DPAD_LEFT", "KEYCODE_DPAD_RIGHT",
+            "KEYCODE_SCREEN_OFF"
+          ]
+        }
+      ],
+      "outputMode": "once",
+      "timeout": 5000,
+      "tags": ["shell", "input", "keyevent"]
+    }
+  ]
+}

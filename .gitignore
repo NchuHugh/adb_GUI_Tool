@@ -1,0 +1,35 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+dist-electron/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
+
+# Electron-builder output
+release/
+
+# Environment
+.env
+.env.local
+
+# Development documentation (not needed for running)
+document_dev/
+document_debug/
+document_prd/
+
+# AI assistant config
+CLAUDE.md

@@ -2,7 +2,32 @@
   "name": "adb-gui",
   "version": "1.0.0",
   "description": "ADB GUI 调试工具 — 面向 Android 专业开发人员的桌面 ADB 命令封装工具",
+  "author": "adb-gui team",
   "main": "dist-electron/main.js",
+  "build": {
+    "appId": "com.yourteam.adb-gui",
+    "productName": "ADB GUI",
+    "files": [
+      "dist-electron/**/*",
+      "config/**/*"
+    ],
+    "directories": {
+      "output": "release",
+      "buildResources": "assets"
+    },
+    "win": {
+      "target": [
+        { "target": "nsis", "arch": ["x64"] }
+      ],
+      "icon": "assets/icon.ico"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "shortcutName": "ADB GUI"
+    }
+  },
   "scripts": {
     "dev": "vite",
     "build": "vite build",

@@ -152,27 +152,6 @@ adbTool/
 
 ## 使用指南
 
-### 界面布局
-
-```
-┌──────────────────────────────────────────────────────────┐
-│  📱 设备状态栏 (serial · model · 状态圆点 · 刷新)         │
-├────────┬─────────────────────────────────────────────────┤
-│        │  [🔍 搜索命令...              ]                  │
-│ 全部   │  ┌──────────┐ ┌──────────┐ ┌──────────┐        │
-│ 设备   │  │ ADB Root │ │  Remount │ │ 重启设备 │        │
-│ 文件   │  └──────────┘ └──────────┘ └──────────┘        │
-│ 应用   │  ┌──────────┐ ┌──────────┐                     │
-│ 日志   │  │ 安装 APK │ │ 卸载应用 │                     │
-│ 属性   │  └──────────┘ └──────────┘                     │
-│ 网络   ├─────────────────────────────────────────────────┤
-│ Shell  │  📺 日志控制台 (搜索 · 折叠 · 高亮 · 过滤)       │
-│        │  [中止] [自动滚动 ✓] [复制] [清除]              │
-│ 历史   │  ─────────────────────────────────────────────  │
-│        │  ─── [14:23:05] 完成 [退出码: 0, 耗时: 1.2s]   │
-└────────┴─────────────────────────────────────────────────┘
-```
-
 ### 执行命令
 
 1. 左侧分组导航选择命令分类，或使用搜索框查找
@@ -248,35 +227,6 @@ npm run package        # 构建 + 打包 (NSIS + Portable)
 npm run package:win    # 仅 Windows 目标
 ```
 
-产物输出到 `dist/` 目录：
-
-| 文件 | 说明 |
-|------|------|
-| `ADB GUI Setup x.x.x.exe` | NSIS 安装包（可选安装目录，创建桌面快捷方式） |
-| `ADB GUI x.x.x.exe` | Portable 单文件版（无需安装，双击运行） |
-
----
-
-## 开发
-
-```bash
-npm run dev           # 开发模式 (Vite HMR + Electron)
-npm run typecheck     # TypeScript 类型检查
-npm run test          # 运行测试
-npm run test:watch    # 监听模式测试
-```
-
-### 项目文档
-
-项目开发过程文档存放在 `document_dev/`、`document_prd/`、`document_debug/` 目录中（已加入 `.gitignore`），包含：
-
-| 阶段 | PRD | 实施记录 |
-|------|-----|----------|
-| Phase 1 · MVP | `ADB_GUI_Tool_PRD.md` | `phase1-mvp-implementation.md` |
-| Phase 2 · 完整功能 | `ADB_GUI_Tool_Phase2_PRD.md` | `phase2-full-implementation.md` |
-| Phase 3 · 自定义命令编辑器 | —（集成于 Phase 4 实施记录） | `phase3-custom-command-editor.md` |
-| Phase 4 · 编辑与收藏 | `ADB_GUI_Tool_Phase4_PRD.md` | `phase4-editing-favorites.md` |
-| Phase 5 · 日志控制台强化 | `ADB_GUI_Tool_Phase5_PRD.md` | `phase5-log-panel-enhancement.md` |
 
 ---
 

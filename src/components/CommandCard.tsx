@@ -3,6 +3,7 @@ import { CommandDef, RunRequest } from '../types'
 import { useCommandStore } from '../store/commandStore'
 import { Loader2, CheckCircle2, XCircle, ChevronRight, Trash2, Pencil, Star } from 'lucide-react'
 import { useFavoriteStore } from '../store/favoriteStore'
+import { confirmDangerousCommand, isDangerousCommand } from '../utils/commandExecutionUtils'
 
 interface Props {
   command: CommandDef
@@ -22,14 +23,7 @@ export default function CommandCard({ command }: Props) {
   // Bug 8 fix: 流式命令（timeout=0）运行时禁止再次点击
   const isStreamRunning = command.timeout === 0 && recentExec?.status === 'running'
 
-  // Bug 6: 危险命令 ID 列表
-  const isDangerous = [
-    'adb_root', 'adb_unroot', 'adb_remount',
-    'adb_reboot', 'adb_reboot_bootloader', 'adb_reboot_recovery',
-    'adb_rm', 'adb_uninstall',
-    'adb_am_clear_data', 'adb_am_force_stop',
-    'adb_forward_remove',
-  ].includes(command.id)
+  const isDangerous = isDangerousCommand(command.id)
 
   const handleClick = async () => {
     setErrorMsg(null)
@@ -39,11 +33,7 @@ export default function CommandCard({ command }: Props) {
 
     if (command.invalid) return
 
-    // Bug 6: 危险命令需要确认弹窗
-    if (isDangerous) {
-      const confirmed = window.confirm(`确认执行「${command.label}」？\n\n${command.description}\n\n此操作可能产生不可逆的影响，是否继续？`)
-      if (!confirmed) return
-    }
+    if (!confirmDangerousCommand(command)) return
 
     // F3: 带参数的命令 → 打开 ParamDialog
     if (hasParams) {

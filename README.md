@@ -28,7 +28,7 @@
 | 🖱️ **图形化命令执行** | 50+ 内置 adb 命令，分组展示，一键执行 |
 | 📝 **参数填写弹窗** | 支持 text / file / directory / select 四种参数类型，实时命令预览 |
 | 🔗 **一键填入联动** | 将一条命令的输出直接填入另一条命令的参数，消除复制粘贴 |
-| 📺 **内置终端** | xterm.js 实时流式输出，支持 ANSI 颜色，环形缓冲防止内存溢出 |
+| 📺 **日志控制台** | React DOM 日志渲染，支持分段折叠、搜索高亮、级别过滤与虚拟滚动 |
 | 📋 **历史记录** | 最近 50 条执行记录持久化，一键重新执行 |
 | 🛑 **命令中止** | 运行中命令可随时中止，超时自动终止 |
 | 🔧 **JSON 驱动** | 命令清单由 `commands.json` 配置文件驱动，不改代码即可新增命令 |
@@ -56,7 +56,7 @@
 构建工具     Vite 5 + vite-plugin-electron
 样式         Tailwind CSS 3
 状态管理     Zustand 4
-终端渲染     @xterm/xterm 5
+日志渲染     React DOM 自定义渲染器
 图标         lucide-react
 打包         electron-builder (NSIS + Portable)
 ```
@@ -122,7 +122,7 @@ adbTool/
 │   │   ├── CommandEditor.tsx    # 自定义命令编辑器（新增/编辑）
 │   │   ├── ParamDialog.tsx      # 参数填写弹窗
 │   │   ├── ParamField.tsx       # 参数输入控件 (4 种类型)
-│   │   ├── LogPanel.tsx         # xterm.js 终端面板
+│   │   ├── LogPanel.tsx         # 日志控制台容器（工具栏、搜索、虚拟列表）
 │   │   ├── HistoryPanel.tsx     # 历史记录抽屉
 │   │   ├── FavoritesPanel.tsx   # 收藏命令抽屉
 │   │   ├── FillPicker.tsx       # 一键填入选择器
@@ -166,7 +166,7 @@ adbTool/
 │ 日志   │  │ 安装 APK │ │ 卸载应用 │                     │
 │ 属性   │  └──────────┘ └──────────┘                     │
 │ 网络   ├─────────────────────────────────────────────────┤
-│ Shell  │  📺 终端输出 (xterm.js · ANSI 颜色 · 实时流式)  │
+│ Shell  │  📺 日志控制台 (搜索 · 折叠 · 高亮 · 过滤)       │
 │        │  [中止] [自动滚动 ✓] [复制] [清除]              │
 │ 历史   │  ─────────────────────────────────────────────  │
 │        │  ─── [14:23:05] 完成 [退出码: 0, 耗时: 1.2s]   │
@@ -276,6 +276,7 @@ npm run test:watch    # 监听模式测试
 | Phase 2 · 完整功能 | `ADB_GUI_Tool_Phase2_PRD.md` | `phase2-full-implementation.md` |
 | Phase 3 · 自定义命令编辑器 | —（集成于 Phase 4 实施记录） | `phase3-custom-command-editor.md` |
 | Phase 4 · 编辑与收藏 | `ADB_GUI_Tool_Phase4_PRD.md` | `phase4-editing-favorites.md` |
+| Phase 5 · 日志控制台强化 | `ADB_GUI_Tool_Phase5_PRD.md` | `phase5-log-panel-enhancement.md` |
 
 ---
 

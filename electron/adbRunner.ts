@@ -13,6 +13,7 @@ interface ActiveJob {
   cmdId: string
   startTime: number
   timeoutHandle?: ReturnType<typeof setTimeout>
+  terminationReason?: DoneEvent['reason']
 }
 
 export interface AdbCheckResult {
@@ -127,7 +128,7 @@ export class AdbRunner {
         job.timeoutHandle = setTimeout(() => {
           if (this.activeJobs.has(cmdId)) {
             this.sendOutput(window, cmdId, 'stderr', '\x1b[33m⚠ 命令已超时，正在终止进程...\x1b[0m\n')
-            this.killJob(cmdId, 'timeout', window)
+            this.killJob(cmdId, 'timeout')
           }
         }, timeoutMs)
       }
@@ -151,16 +152,15 @@ export class AdbRunner {
           clearTimeout(job.timeoutHandle)
         }
 
-        // 检查是否已被 kill（超时/手动中止）
-        const wasKilled = !this.activeJobs.has(cmdId)
+        const reason = job.terminationReason ?? 'normal'
 
         this.activeJobs.delete(cmdId)
 
         const doneEvent: DoneEvent = {
           cmdId,
-          exitCode: code ?? -1,
+          exitCode: reason === 'normal' ? (code ?? -1) : -1,
           durationMs,
-          reason: wasKilled ? 'killed' : 'normal',
+          reason,
         }
 
         console.log(`[AdbRunner] 完成: 退出码=${code}, 耗时=${durationMs}ms, reason=${doneEvent.reason}`)
@@ -180,11 +180,12 @@ export class AdbRunner {
 
         this.sendOutput(window, cmdId, 'stderr', `\x1b[31m进程错误: ${err.message}\x1b[0m\n`)
 
+        const reason = job.terminationReason ?? 'normal'
         const doneEvent: DoneEvent = {
           cmdId,
           exitCode: -1,
           durationMs,
-          reason: 'normal',
+          reason,
         }
         window.webContents.send(IPC_CHANNELS.ADB_DONE, doneEvent)
         resolve()
@@ -201,11 +202,12 @@ export class AdbRunner {
   }
 
   /** 统一 kill 逻辑 */
-  private killJob(cmdId: string, reason: 'timeout' | 'killed' | 'quit', window: BrowserWindow) {
+  private killJob(cmdId: string, reason: 'timeout' | 'killed' | 'quit') {
     const job = this.activeJobs.get(cmdId)
     if (!job) return
 
     console.log(`[AdbRunner] ${reason === 'timeout' ? '超时' : '中止'}终止: ${cmdId}`)
+    job.terminationReason = reason === 'quit' ? 'killed' : reason
     job.process.kill('SIGTERM')
 
     // 3 秒后 SIGKILL 兜底
@@ -224,18 +226,7 @@ export class AdbRunner {
       clearTimeout(job.timeoutHandle)
     }
 
-    this.activeJobs.delete(cmdId)
-
-    const durationMs = Date.now() - job.startTime
-    const doneEvent: DoneEvent = {
-      cmdId,
-      exitCode: -1,
-      durationMs,
-      reason: reason === 'quit' ? 'killed' : reason,
-    }
-    if (!window.isDestroyed()) {
-      window.webContents.send(IPC_CHANNELS.ADB_DONE, doneEvent)
-    }
+    // ADB_DONE 统一由 close/error 回调发送，避免 timeout/killed 双发完成事件。
   }
 
   /** 中止指定命令（用户手动触发） */
@@ -243,26 +234,8 @@ export class AdbRunner {
     const job = this.activeJobs.get(cmdId)
     if (!job) return false
 
-    // 使用主窗口引用（从 activeJobs 的上下文中获取需要特殊处理）
-    // 这里简化：直接 kill 进程，done 事件会通过 close handler 发出
     console.log(`[AdbRunner] 用户中止命令: ${cmdId}`)
-    job.process.kill('SIGTERM')
-
-    if (job.timeoutHandle) {
-      clearTimeout(job.timeoutHandle)
-    }
-
-    // 3 秒后 SIGKILL 兜底
-    setTimeout(() => {
-      try {
-        if (!job.process.killed) {
-          job.process.kill('SIGKILL')
-        }
-      } catch {
-        // 进程可能已经退出
-      }
-    }, 3000)
-
+    this.killJob(cmdId, 'killed')
     return true
   }
 

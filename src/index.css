@@ -13,25 +13,6 @@ html, body, #root {
   overflow: hidden;
 }
 
-/* xterm.js overrides for dark theme */
-.xterm {
-  height: 100%;
-  padding: 8px;
-}
-
-.xterm-viewport::-webkit-scrollbar {
-  width: 6px;
-}
-
-.xterm-viewport::-webkit-scrollbar-track {
-  background: #1e293b;
-}
-
-.xterm-viewport::-webkit-scrollbar-thumb {
-  background: #475569;
-  border-radius: 3px;
-}
-
 /* Custom scrollbar for the app */
 ::-webkit-scrollbar {
   width: 6px;

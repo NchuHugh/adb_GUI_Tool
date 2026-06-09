@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useEffect, useState, useMemo } from 'react'
 import { useCommandStore } from '../store/commandStore'
 import { useLogStore } from '../store/logStore'
 import { processOutput } from '../utils/outputProcessor'
@@ -18,6 +18,12 @@ export default function FillPicker() {
 
   // Bug 4 fix: useState 必须在 early return 之前调用（React hooks 规则）
   const [showSourceSelect, setShowSourceSelect] = useState(true)
+
+  useEffect(() => {
+    if (isOpen) {
+      setShowSourceSelect(true)
+    }
+  }, [isOpen])
 
   // Bug 4 fix: useMemo 必须在 early return 之前调用
   const filteredLines = useMemo(() => {

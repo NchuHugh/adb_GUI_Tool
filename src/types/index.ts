@@ -129,6 +129,43 @@ export interface FavoriteEntry {
   order: number                    // 排序字段
 }
 
+// ---- Phase 5 日志控制台 ----
+
+export type LogLevel = 'verbose' | 'debug' | 'info' | 'warning' | 'error' | 'unknown'
+
+export interface LogLine {
+  id: string
+  cmdId: string
+  stream: 'stdout' | 'stderr' | 'system'
+  raw: string
+  html: string
+  level: LogLevel
+  timestamp: number
+}
+
+export interface LogSegment {
+  cmdId: string
+  commandLabel: string
+  resolvedCommand: string
+  startedAt: number
+  endedAt?: number
+  exitCode?: number
+  reason?: DoneEvent['reason']
+  lineIds: string[]
+  isCollapsed: boolean
+}
+
+export interface LogSearchOptions {
+  caseSensitive: boolean
+  useRegex: boolean
+}
+
+export type LogStreamFilter = 'all' | 'stdout' | 'stderr'
+
+export type LogRenderItem =
+  | { type: 'segment-header'; cmdId: string }
+  | { type: 'line'; lineId: string }
+
 // ---- IPC 通道名称常量 ----
 
 export const IPC_CHANNELS = {

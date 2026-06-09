@@ -22,6 +22,10 @@ export default function App() {
   const addEntry = useLogStore(s => s.addEntry)
   const loadHistory = useLogStore(s => s.loadHistory)
   const setOutputCache = useLogStore(s => s.setOutputCache)
+  const openSegment = useLogStore(s => s.openSegment)
+  const appendLine = useLogStore(s => s.appendLine)
+  const closeSegment = useLogStore(s => s.closeSegment)
+  const clearLog = useLogStore(s => s.clearLog)
   const consumePendingMeta = useCommandStore(s => s.consumePendingMeta)
   const updateExecutionState = useCommandStore(s => s.updateExecutionState)
   const executionStates = useCommandStore(s => s.executionStates)
@@ -58,6 +62,28 @@ export default function App() {
       const buf = outputBuffers.current
       const existing = buf.get(chunk.cmdId) || ''
       buf.set(chunk.cmdId, existing + chunk.text)
+
+      const meta = useCommandStore.getState().pendingCommandMetas.get(chunk.cmdId)
+      const resolvedCommand = meta ? ['adb', ...meta.resolvedArgs].join(' ') : ''
+      const segmentExists = useLogStore.getState().segments.has(chunk.cmdId)
+      if (!segmentExists) {
+        openSegment(chunk.cmdId, {
+          commandLabel: meta?.commandLabel ?? chunk.cmdId.slice(0, 8),
+          resolvedCommand,
+          startedAt: Date.now(),
+        })
+      }
+
+      const lines = chunk.text.split(/\r?\n/)
+      lines.forEach((raw, index) => {
+        if (!raw && index === lines.length - 1) return
+        appendLine({
+          cmdId: chunk.cmdId,
+          stream: chunk.stream,
+          raw,
+          timestamp: Date.now(),
+        })
+      })
     })
 
     // 监听命令完成（构造 HistoryEntry + 更新执行状态）
@@ -87,6 +113,20 @@ export default function App() {
       // 从 store 取出执行前记录的元信息（由 CommandCard/ParamDialog 在执行前写入）
       const meta = consumePendingMeta(event.cmdId)
       const output = outputBuffers.current.get(event.cmdId) || ''
+      const resolvedCommand = meta ? ['adb', ...meta.resolvedArgs].join(' ') : ''
+
+      if (meta?.commandId === 'adb_logcat_clear' && event.exitCode === 0) {
+        clearLog()
+      }
+
+      if (!useLogStore.getState().segments.has(event.cmdId)) {
+        openSegment(event.cmdId, {
+          commandLabel: meta?.commandLabel ?? event.cmdId.slice(0, 8),
+          resolvedCommand,
+          startedAt: Date.now() - event.durationMs,
+        })
+      }
+      closeSegment(event.cmdId, event.exitCode, event.reason)
 
       // 缓存输出（F4 FillPicker 用）
       if (meta && output.trim()) {
@@ -94,6 +134,7 @@ export default function App() {
       }
 
       if (meta) {
+        const command = useCommandStore.getState().commands.find(c => c.id === meta.commandId)
         const entry: HistoryEntry = {
           id: event.cmdId,
           commandId: meta.commandId,
@@ -103,7 +144,7 @@ export default function App() {
           exitCode: event.exitCode,
           durationMs: event.durationMs,
           executedAt: new Date().toISOString(),
-          hasParams: meta.resolvedArgs.length > 1 || meta.resolvedArgs.some(a => a.includes('{')),
+          hasParams: (command?.params.length ?? 0) > 0,
           outputText: output,
         }
         addEntry(entry)

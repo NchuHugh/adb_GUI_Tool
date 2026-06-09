@@ -1,6 +1,7 @@
 import { useLogStore } from '../store/logStore'
 import { useCommandStore } from '../store/commandStore'
 import { RotateCcw, X, Trash2, Clock } from 'lucide-react'
+import { buildInitialValuesFromResolvedArgs, confirmDangerousCommand } from '../utils/commandExecutionUtils'
 
 export default function HistoryPanel() {
   const history = useLogStore(s => s.history)
@@ -31,7 +32,9 @@ export default function HistoryPanel() {
       return
     }
 
-    if (!entry.hasParams) {
+    if (!confirmDangerousCommand(cmd)) return
+
+    if (cmd.params.length === 0) {
       // 无参数命令：直接执行
       const cmdId = crypto.randomUUID()
       const request = {
@@ -49,11 +52,7 @@ export default function HistoryPanel() {
       window.electronAPI.runCommand(request).catch(console.error)
     } else {
       // 有参数命令：打开 ParamDialog，预填上次参数
-      // F3 实现时此逻辑生效
-      const initialValues: Record<string, string> = {}
-      cmd.params.forEach((p, i) => {
-        initialValues[p.key] = entry.resolvedArgs[i] ?? p.default
-      })
+      const initialValues = buildInitialValuesFromResolvedArgs(cmd, entry.resolvedArgs)
       useCommandStore.getState().openParamDialog(cmd, initialValues)
     }
   }

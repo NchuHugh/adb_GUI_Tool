@@ -5,7 +5,7 @@
 
 import fs from 'fs'
 import path from 'path'
-import { CommandsConfig, CommandDef } from '../src/types'
+import { CommandsConfig, CommandDef, CommandGroup } from '../src/types'
 
 const CONFIG_FILENAME = 'commands.json'
 

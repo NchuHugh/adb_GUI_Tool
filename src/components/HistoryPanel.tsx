@@ -4,6 +4,7 @@ import { RotateCcw, X, Trash2, Clock } from 'lucide-react'
 import { buildInitialValuesFromResolvedArgs, confirmDangerousCommand } from '../utils/commandExecutionUtils'
 
 export default function HistoryPanel() {
+  const logPanelHeight = useLogStore(s => s.logPanelHeight)
   const history = useLogStore(s => s.history)
   const isHistoryOpen = useLogStore(s => s.isHistoryOpen)
   const toggleHistory = useLogStore(s => s.toggleHistory)
@@ -70,14 +71,14 @@ export default function HistoryPanel() {
       {/* 遮罩层（点击关闭抽屉）*/}
       <div
         className="fixed inset-0 z-40"
-        style={{ top: 48, bottom: '35%' }}
+        style={{ top: 48, bottom: logPanelHeight + 6 }}
         onClick={toggleHistory}
       />
 
       {/* 抽屉面板 */}
       <div
         className="fixed right-0 z-50 flex flex-col bg-sidebar-bg border-l border-divider shadow-2xl transition-transform duration-200 ease-out"
-        style={{ top: 48, bottom: '35%', width: 360, transform: isHistoryOpen ? 'translateX(0)' : 'translateX(100%)' }}
+        style={{ top: 48, bottom: logPanelHeight + 6, width: 360, transform: isHistoryOpen ? 'translateX(0)' : 'translateX(100%)' }}
       >
         {/* 标题栏 */}
         <div className="flex items-center justify-between px-4 py-3 border-b border-divider flex-shrink-0">

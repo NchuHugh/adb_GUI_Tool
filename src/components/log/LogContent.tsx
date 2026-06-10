@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from 'react'
 import { useLogStore } from '../../store/logStore'
 import { buildRenderItems, getVisibleLineIds } from '../../utils/logUtils'
 import LogLine from './LogLine'
@@ -7,6 +7,17 @@ import LogSegmentHeader from './LogSegmentHeader'
 const HEADER_HEIGHT = 40
 const LINE_HEIGHT = 22
 const OVERSCAN = 20
+
+function throttle<T extends (...args: never[]) => void>(fn: T, ms: number): T {
+  let last = 0
+  return ((...args: Parameters<T>) => {
+    const now = Date.now()
+    if (now - last >= ms) {
+      last = now
+      fn(...args)
+    }
+  }) as T
+}
 
 export default function LogContent() {
   const parentRef = useRef<HTMLDivElement>(null)
@@ -28,10 +39,18 @@ export default function LogContent() {
   const toggleSegment = useLogStore(s => s.toggleSegment)
   const consumeScrollTarget = useLogStore(s => s.consumeScrollTarget)
 
+  const deferredLineOrder = useDeferredValue(lineOrder)
+
   const renderItems = useMemo(() => {
-    const visibleLineIds = getVisibleLineIds({ lineOrder, lines, segments, levelFilter, streamFilter })
+    const visibleLineIds = getVisibleLineIds({
+      lineOrder: deferredLineOrder,
+      lines,
+      segments,
+      levelFilter,
+      streamFilter,
+    })
     return buildRenderItems({ segmentOrder, segments, visibleLineIds })
-  }, [lineOrder, lines, segments, segmentOrder, levelFilter, streamFilter])
+  }, [deferredLineOrder, lines, segments, segmentOrder, levelFilter, streamFilter])
 
   const offsets = useMemo(() => {
     const result: number[] = []
@@ -68,12 +87,19 @@ export default function LogContent() {
     return () => window.removeEventListener('resize', updateSize)
   }, [])
 
+  const scrollToBottom = useCallback(
+    throttle(() => {
+      if (!autoScroll || renderItems.length === 0) return
+      const element = parentRef.current
+      if (!element) return
+      element.scrollTop = Math.max(0, offsets.totalHeight - element.clientHeight)
+    }, 100),
+    [autoScroll, renderItems.length, offsets.totalHeight],
+  )
+
   useEffect(() => {
-    if (!autoScroll || renderItems.length === 0) return
-    const element = parentRef.current
-    if (!element) return
-    element.scrollTop = Math.max(0, offsets.totalHeight - element.clientHeight)
-  }, [autoScroll, renderItems.length, offsets.totalHeight])
+    scrollToBottom()
+  }, [renderItems.length, scrollToBottom])
 
   useEffect(() => {
     if (!scrollTargetLineId) return

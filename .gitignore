@@ -30,6 +30,14 @@ release/
 document_dev/
 document_debug/
 document_prd/
+knowledgeBase/
 
 # AI assistant config
 CLAUDE.md
+
+# User runtime data (custom commands, history, favorites)
+# Runtime: %APPDATA%\adb-gui\ — ignore local copies synced into the repo
+adb-gui/history.json
+adb-gui/favorites.json
+adb-gui/commands.json
+adb-gui/

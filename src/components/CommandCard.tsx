@@ -4,6 +4,7 @@ import { useCommandStore } from '../store/commandStore'
 import { Loader2, CheckCircle2, XCircle, ChevronRight, Trash2, Pencil, Star } from 'lucide-react'
 import { useFavoriteStore } from '../store/favoriteStore'
 import { confirmDangerousCommand, isDangerousCommand } from '../utils/commandExecutionUtils'
+import { templateToAdbArgs } from '../utils/argParser'
 
 interface Props {
   command: CommandDef
@@ -46,7 +47,7 @@ export default function CommandCard({ command }: Props) {
     const cmdId = crypto.randomUUID()
 
     // 构建 resolvedArgs：从 template 中分离出参数（去除 'adb' 前缀）
-    const resolvedArgs = command.template.split(/\s+/).slice(1)
+    const resolvedArgs = templateToAdbArgs(command.template)
 
     const request: RunRequest = {
       cmdId,

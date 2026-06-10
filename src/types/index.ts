@@ -12,11 +12,11 @@ export interface RunRequest {
   resolvedArgs: string[] // 已替换占位符的参数列表
 }
 
-/** 主进程 → 渲染进程：实时命令输出块 */
+/** 主进程 → 渲染进程：实时命令输出块（批量行） */
 export interface OutputChunk {
   cmdId: string
   stream: 'stdout' | 'stderr'
-  text: string
+  lines: string[]
 }
 
 /** 主进程 → 渲染进程：命令执行结束 */

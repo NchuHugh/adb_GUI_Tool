@@ -379,13 +379,35 @@
       "tags": ["log"]
     },
     {
+      "id": "adb_shell_pidof",
+      "groupId": "shell",
+      "label": "获取进程 PID",
+      "description": "获取指定包名对应进程的 PID（供 Logcat 按 PID 过滤使用）",
+      "template": "adb shell pidof -s {package}",
+      "params": [
+        { "key": "package", "label": "应用包名", "type": "text", "required": true, "default": "", "placeholder": "com.example.app", "fillable": true }
+      ],
+      "outputMode": "once",
+      "timeout": 10000,
+      "tags": ["shell", "log"]
+    },
+    {
       "id": "adb_logcat_package",
       "groupId": "log",
       "label": "Logcat（按 PID）",
-      "description": "仅显示指定包名对应进程的日志",
-      "template": "adb logcat --pid=$(adb shell pidof -s {package})",
+      "description": "仅显示指定包名对应进程的日志（需先获取 PID）",
+      "template": "adb logcat --pid={pid}",
       "params": [
-        { "key": "package", "label": "应用包名", "type": "text", "required": true, "default": "", "placeholder": "com.example.app", "fillable": true }
+        {
+          "key": "pid",
+          "label": "进程 PID",
+          "type": "text",
+          "required": true,
+          "default": "",
+          "placeholder": "12345",
+          "fillable": true,
+          "fillSourceCommandId": "adb_shell_pidof"
+        }
       ],
       "outputMode": "stream",
       "timeout": 0,

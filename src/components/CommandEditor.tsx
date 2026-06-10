@@ -16,6 +16,13 @@ const OUTPUT_MODES: { value: OutputMode; label: string }[] = [
   { value: 'once', label: '一次性 (once)' },
 ]
 
+const NO_SPELL = {
+  spellCheck: false,
+  autoCorrect: 'off' as const,
+  autoCapitalize: 'off' as const,
+  autoComplete: 'off' as const,
+}
+
 function emptyParam(): CommandParam {
   return { key: '', label: '', type: 'text', required: false, default: '' }
 }
@@ -205,6 +212,7 @@ export default function CommandEditor() {
                 value={id}
                 onChange={e => setId(e.target.value)}
                 disabled={isEditMode}
+                {...NO_SPELL}
               />
               {isEditMode ? (
                 <p className="text-xs text-slate-500 mt-0.5">命令 ID 不可修改</p>
@@ -234,6 +242,7 @@ export default function CommandEditor() {
               placeholder="如：我的自定义命令"
               value={label}
               onChange={e => setLabel(e.target.value)}
+              {...NO_SPELL}
             />
           </div>
 
@@ -245,6 +254,7 @@ export default function CommandEditor() {
               placeholder="简要描述该命令的功能"
               value={description}
               onChange={e => setDescription(e.target.value)}
+              {...NO_SPELL}
             />
           </div>
 
@@ -256,6 +266,7 @@ export default function CommandEditor() {
               placeholder="adb shell {cmd}"
               value={template}
               onChange={e => setTemplate(e.target.value)}
+              {...NO_SPELL}
             />
             <p className="text-xs text-slate-500 mt-0.5">使用 {'{key}'} 作为参数占位符</p>
           </div>
@@ -294,6 +305,7 @@ export default function CommandEditor() {
               placeholder="如：custom, debug（逗号分隔）"
               value={tags}
               onChange={e => setTags(e.target.value)}
+              {...NO_SPELL}
             />
           </div>
 
@@ -333,6 +345,7 @@ export default function CommandEditor() {
                         placeholder="key（如：package）"
                         value={p.key}
                         onChange={e => updateParam(i, { key: e.target.value })}
+                        {...NO_SPELL}
                       />
                       <select
                         className="input-field text-sm"
@@ -349,6 +362,7 @@ export default function CommandEditor() {
                         placeholder="显示标签"
                         value={p.label}
                         onChange={e => updateParam(i, { label: e.target.value })}
+                        {...NO_SPELL}
                       />
                       <input
                         type="text"
@@ -356,6 +370,7 @@ export default function CommandEditor() {
                         placeholder="默认值"
                         value={p.default}
                         onChange={e => updateParam(i, { default: e.target.value })}
+                        {...NO_SPELL}
                       />
                     </div>
                     <div className="flex items-center gap-3 mt-2">
@@ -384,6 +399,7 @@ export default function CommandEditor() {
                           placeholder="fillSourceCommandId"
                           value={p.fillSourceCommandId || ''}
                           onChange={e => updateParam(i, { fillSourceCommandId: e.target.value })}
+                          {...NO_SPELL}
                         />
                       )}
                     </div>
@@ -396,6 +412,7 @@ export default function CommandEditor() {
                         onChange={e => updateParam(i, {
                           options: e.target.value.split(',').map(s => s.trim()).filter(Boolean),
                         })}
+                        {...NO_SPELL}
                       />
                     )}
                   </div>

@@ -10,6 +10,7 @@ import { ConfigLoader } from './configLoader'
 import { AdbRunner, checkAdbAvailability, setAdbAvailable } from './adbRunner'
 import { DevicePoller } from './devicePoller'
 import { IPC_CHANNELS } from '../src/types'
+import { templateToAdbArgs } from '../src/utils/argParser'
 
 // 设为 true 可打开 DevTools
 const isDev = !app.isPackaged
@@ -34,6 +35,7 @@ function createWindow() {
       contextIsolation: true,
       nodeIntegration: false,
       sandbox: false,
+      spellcheck: false,
     },
   })
 
@@ -143,7 +145,7 @@ function registerIpcHandlers() {
     return new Promise((resolve) => {
       const args: string[] = []
       if (deviceSerial) args.push('-s', deviceSerial)
-      args.push(...command.template.split(/\s+/).slice(1))
+      args.push(...templateToAdbArgs(command.template))
 
       const { spawn } = require('child_process')
       const proc = spawn('adb', args, { windowsHide: true, stdio: ['ignore', 'pipe', 'pipe'] })

@@ -1,5 +1,7 @@
-import { CheckCircle2, ChevronDown, ChevronRight, Clock, Loader2, Square, XCircle } from 'lucide-react'
+import { useState } from 'react'
+import { CheckCircle2, CheckCheck, ChevronDown, ChevronRight, Clock, Copy, Loader2, Square, XCircle } from 'lucide-react'
 import { LogSegment } from '../../types'
+import { useLogStore } from '../../store/logStore'
 
 interface Props {
   segment: LogSegment
@@ -33,11 +35,20 @@ function SegmentStatus({ segment }: { segment: LogSegment }) {
 }
 
 export default function LogSegmentHeader({ segment, onToggle }: Props) {
+  const [copied, setCopied] = useState(false)
+  const getSegmentText = useLogStore(s => s.getSegmentText)
   const duration = formatDuration(segment)
+
+  const handleCopySegment = () => {
+    const text = getSegmentText(segment.cmdId)
+    window.electronAPI.copyToClipboard(text)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 1500)
+  }
 
   return (
     <div
-      className="flex items-center gap-2 px-3 h-10 bg-slate-900 border-b border-t border-slate-700 cursor-pointer hover:bg-slate-800 select-none"
+      className="group flex items-center gap-2 px-3 h-10 bg-slate-900 border-b border-t border-slate-700 cursor-pointer hover:bg-slate-800 select-none"
       onClick={() => onToggle(segment.cmdId)}
       title={segment.resolvedCommand}
     >
@@ -59,6 +70,21 @@ export default function LogSegmentHeader({ segment, onToggle }: Props) {
       <span className="text-xs text-slate-500 flex-shrink-0">
         {formatTime(segment.startedAt)}
       </span>
+      {segment.endedAt && (
+        <button
+          onClick={(e) => {
+            e.stopPropagation()
+            handleCopySegment()
+          }}
+          title="复制此命令的输出"
+          className="opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded text-slate-500 hover:text-slate-200 hover:bg-slate-700"
+        >
+          {copied
+            ? <CheckCheck size={13} className="text-green-400" />
+            : <Copy size={13} />
+          }
+        </button>
+      )}
       <SegmentStatus segment={segment} />
     </div>
   )

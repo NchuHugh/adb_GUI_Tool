@@ -9,6 +9,13 @@ interface ParamFieldProps {
   onFillRequest?: (key: string) => void
 }
 
+const NO_SPELL = {
+  spellCheck: false,
+  autoCorrect: 'off' as const,
+  autoCapitalize: 'off' as const,
+  autoComplete: 'off' as const,
+}
+
 export default function ParamField({ param, value, error, onChange, onFillRequest }: ParamFieldProps) {
   const inputClass = `w-full bg-slate-700 rounded px-3 py-2 text-sm font-mono
     border ${error ? 'border-red-500' : 'border-slate-600'}
@@ -22,6 +29,7 @@ export default function ParamField({ param, value, error, onChange, onFillReques
             value={value}
             onChange={e => onChange(param.key, e.target.value)}
             className={`${inputClass} appearance-none`}
+            {...NO_SPELL}
           >
             <option value="">-- 请选择 --</option>
             {param.options?.map(opt => (
@@ -40,6 +48,7 @@ export default function ParamField({ param, value, error, onChange, onFillReques
               onChange={e => onChange(param.key, e.target.value)}
               className={`${inputClass} flex-1`}
               readOnly
+              {...NO_SPELL}
             />
             <button
               type="button"
@@ -64,6 +73,7 @@ export default function ParamField({ param, value, error, onChange, onFillReques
               onChange={e => onChange(param.key, e.target.value)}
               className={`${inputClass} flex-1`}
               readOnly
+              {...NO_SPELL}
             />
             <button
               type="button"
@@ -87,6 +97,7 @@ export default function ParamField({ param, value, error, onChange, onFillReques
             placeholder={param.placeholder}
             onChange={e => onChange(param.key, e.target.value)}
             className={inputClass}
+            {...NO_SPELL}
           />
         )
     }

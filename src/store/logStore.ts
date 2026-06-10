@@ -8,7 +8,7 @@ import {
   LogSegment,
   LogStreamFilter,
 } from '../types'
-import { ansiToHtml, buildSearchRegex, detectLogLevel, getVisibleLineIds, lineMatchesSearch } from '../utils/logUtils'
+import { ansiToHtml, buildSearchRegex, detectLogLevel, getVisibleLineIds, lineMatchesSearch, stripAnsi } from '../utils/logUtils'
 
 interface LogStore {
   lines: Map<string, LogLine>
@@ -27,6 +27,10 @@ interface LogStore {
   streamFilter: LogStreamFilter
   scrollTargetLineId: string | null
 
+  // Phase 6: 日志面板布局
+  isFloating: boolean
+  logPanelHeight: number
+
   // 历史记录（最多 50 条）
   history: HistoryEntry[]
 
@@ -41,6 +45,7 @@ interface LogStore {
 
   // 动作
   appendLine: (line: Omit<LogLine, 'id' | 'html' | 'level'>) => void
+  appendLines: (partials: Array<Omit<LogLine, 'id' | 'html' | 'level'>>) => void
   openSegment: (cmdId: string, meta: Pick<LogSegment, 'commandLabel' | 'resolvedCommand' | 'startedAt'>) => void
   closeSegment: (cmdId: string, exitCode: number, reason: DoneEvent['reason']) => void
   toggleSegment: (cmdId: string) => void
@@ -62,6 +67,10 @@ interface LogStore {
   setAutoScroll: (auto: boolean) => void
   setOutputCache: (commandId: string, output: string) => void
   getOutputCache: (commandId: string) => string | undefined
+  getSegmentText: (cmdId: string) => string
+  setIsFloating: (floating: boolean) => void
+  setLogPanelHeight: (height: number) => void
+  resizeLogPanel: (deltaY: number) => void
 }
 
 function computeMatches(state: Pick<LogStore, 'searchQuery' | 'searchOptions' | 'lineOrder' | 'lines' | 'segments' | 'levelFilter' | 'streamFilter'>): {
@@ -105,26 +114,47 @@ export const useLogStore = create<LogStore>((set, get) => ({
   levelFilter: new Set(),
   streamFilter: 'all',
   scrollTargetLineId: null,
+  isFloating: false,
+  logPanelHeight: (() => {
+    const saved = localStorage.getItem('logPanelHeight')
+    return saved ? parseInt(saved, 10) : 280
+  })(),
   history: [],
   autoScroll: true,
   isHistoryOpen: false,
   outputCache: new Map(),
 
   appendLine: (partial) => {
+    get().appendLines([partial])
+  },
+
+  appendLines: (partials) => {
+    if (partials.length === 0) return
+
     set((state) => {
-      const id = String(state.lineSeq).padStart(6, '0')
-      const line: LogLine = {
-        ...partial,
-        id,
-        html: ansiToHtml(partial.raw),
-        level: detectLogLevel(partial.raw, partial.stream),
-      }
-      const lines = new Map(state.lines).set(id, line)
-      let lineOrder = [...state.lineOrder, id]
+      const lines = new Map(state.lines)
+      let lineOrder = [...state.lineOrder]
+      let lineSeq = state.lineSeq
       const segments = new Map(state.segments)
-      const segment = segments.get(partial.cmdId)
-      if (segment) {
-        segments.set(partial.cmdId, { ...segment, lineIds: [...segment.lineIds, id] })
+
+      for (const partial of partials) {
+        if (partial.raw === '') continue
+
+        const id = String(lineSeq).padStart(6, '0')
+        lineSeq += 1
+        const line: LogLine = {
+          ...partial,
+          id,
+          html: ansiToHtml(partial.raw),
+          level: detectLogLevel(partial.raw, partial.stream),
+        }
+        lines.set(id, line)
+        lineOrder.push(id)
+
+        const segment = segments.get(partial.cmdId)
+        if (segment) {
+          segments.set(partial.cmdId, { ...segment, lineIds: [...segment.lineIds, id] })
+        }
       }
 
       if (lineOrder.length > 100_000) {
@@ -141,11 +171,11 @@ export const useLogStore = create<LogStore>((set, get) => ({
         }
       }
 
-      const nextState = { ...state, lines, lineOrder, segments }
+      const nextState = { ...state, lines, lineOrder, lineSeq, segments }
       return {
         lines,
         lineOrder,
-        lineSeq: state.lineSeq + 1,
+        lineSeq,
         segments,
         ...computeMatches(nextState),
       }
@@ -325,4 +355,33 @@ export const useLogStore = create<LogStore>((set, get) => ({
   },
 
   getOutputCache: (commandId) => get().outputCache.get(commandId),
+
+  getSegmentText: (cmdId) => {
+    const { lines, segments } = get()
+    const segment = segments.get(cmdId)
+    if (!segment) return ''
+    return segment.lineIds
+      .map(id => lines.get(id))
+      .filter((line): line is LogLine => !!line && line.stream !== 'system')
+      .map(line => stripAnsi(line.raw))
+      .join('\n')
+  },
+
+  setIsFloating: (isFloating) => set({ isFloating }),
+
+  setLogPanelHeight: (logPanelHeight) => {
+    localStorage.setItem('logPanelHeight', String(Math.round(logPanelHeight)))
+    set({ logPanelHeight })
+  },
+
+  resizeLogPanel: (deltaY) => {
+    const MIN_LOG_HEIGHT = 80
+    const MAX_LOG_HEIGHT_RATIO = 0.7
+    set((state) => {
+      const maxH = window.innerHeight * MAX_LOG_HEIGHT_RATIO
+      const next = Math.min(maxH, Math.max(MIN_LOG_HEIGHT, state.logPanelHeight + deltaY))
+      localStorage.setItem('logPanelHeight', String(Math.round(next)))
+      return { logPanelHeight: next }
+    })
+  },
 }))

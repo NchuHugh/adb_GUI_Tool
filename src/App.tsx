@@ -3,6 +3,8 @@ import DeviceStatusBar from './components/DeviceStatusBar'
 import Sidebar from './components/Sidebar'
 import CommandList from './components/CommandList'
 import LogPanel from './components/LogPanel'
+import LogResizeHandle from './components/log/LogResizeHandle'
+import LogFloatOverlay from './components/log/LogFloatOverlay'
 import AdbMissingModal from './components/AdbMissingModal'
 import HistoryPanel from './components/HistoryPanel'
 import ParamDialog from './components/ParamDialog'
@@ -23,9 +25,12 @@ export default function App() {
   const loadHistory = useLogStore(s => s.loadHistory)
   const setOutputCache = useLogStore(s => s.setOutputCache)
   const openSegment = useLogStore(s => s.openSegment)
-  const appendLine = useLogStore(s => s.appendLine)
+  const appendLines = useLogStore(s => s.appendLines)
   const closeSegment = useLogStore(s => s.closeSegment)
   const clearLog = useLogStore(s => s.clearLog)
+  const isLogFloating = useLogStore(s => s.isFloating)
+  const logPanelHeight = useLogStore(s => s.logPanelHeight)
+  const resizeLogPanel = useLogStore(s => s.resizeLogPanel)
   const consumePendingMeta = useCommandStore(s => s.consumePendingMeta)
   const updateExecutionState = useCommandStore(s => s.updateExecutionState)
   const executionStates = useCommandStore(s => s.executionStates)
@@ -59,9 +64,10 @@ export default function App() {
 
     // 监听命令输出（累积完整输出文本）
     const unsubOutput = window.electronAPI.onAdbOutput((chunk) => {
+      const text = chunk.lines.join('\n')
       const buf = outputBuffers.current
       const existing = buf.get(chunk.cmdId) || ''
-      buf.set(chunk.cmdId, existing + chunk.text)
+      buf.set(chunk.cmdId, existing + (existing && text ? '\n' : '') + text)
 
       const meta = useCommandStore.getState().pendingCommandMetas.get(chunk.cmdId)
       const resolvedCommand = meta ? ['adb', ...meta.resolvedArgs].join(' ') : ''
@@ -74,16 +80,17 @@ export default function App() {
         })
       }
 
-      const lines = chunk.text.split(/\r?\n/)
-      lines.forEach((raw, index) => {
-        if (!raw && index === lines.length - 1) return
-        appendLine({
-          cmdId: chunk.cmdId,
-          stream: chunk.stream,
-          raw,
-          timestamp: Date.now(),
-        })
-      })
+      const now = Date.now()
+      appendLines(
+        chunk.lines
+          .filter(raw => raw !== '')
+          .map(raw => ({
+            cmdId: chunk.cmdId,
+            stream: chunk.stream,
+            raw,
+            timestamp: now,
+          })),
+      )
     })
 
     // 监听命令完成（构造 HistoryEntry + 更新执行状态）
@@ -174,12 +181,21 @@ export default function App() {
 
         {/* 命令区 + 日志面板（垂直分割）*/}
         <div className="flex flex-col flex-1 overflow-hidden">
-          <div className="flex-1 overflow-hidden">
+          <div className="flex-1 overflow-hidden min-h-0">
             <CommandList />
           </div>
-          <LogPanel />
+          {!isLogFloating && (
+            <>
+              <LogResizeHandle onResize={resizeLogPanel} />
+              <div style={{ height: logPanelHeight, flexShrink: 0 }} className="min-h-0">
+                <LogPanel />
+              </div>
+            </>
+          )}
         </div>
       </div>
+
+      {isLogFloating && <LogFloatOverlay />}
 
       {/* F1: adb 未找到模态框 */}
       <AdbMissingModal />

@@ -1,11 +1,15 @@
-import { ChevronDown, ChevronUp, Copy, Trash2, Square } from 'lucide-react'
+import { ChevronDown, ChevronUp, Copy, Trash2, Square, Maximize2 } from 'lucide-react'
 import { useCommandStore } from '../../store/commandStore'
 import { useLogStore } from '../../store/logStore'
 import { LogLevel } from '../../types'
 import { getVisibleLineIds, stripAnsi } from '../../utils/logUtils'
 import LogLevelFilter from './LogLevelFilter'
 
-export default function LogToolbar() {
+interface Props {
+  isFloating?: boolean
+}
+
+export default function LogToolbar({ isFloating = false }: Props) {
   const executionStates = useCommandStore(s => s.executionStates)
   const lines = useLogStore(s => s.lines)
   const lineOrder = useLogStore(s => s.lineOrder)
@@ -20,6 +24,7 @@ export default function LogToolbar() {
   const toggleLevelFilter = useLogStore(s => s.toggleLevelFilter)
   const setLevelFilter = useLogStore(s => s.setLevelFilter)
   const setStreamFilter = useLogStore(s => s.setStreamFilter)
+  const setIsFloating = useLogStore(s => s.setIsFloating)
 
   const runningCmdIds = Array.from(executionStates.values())
     .filter(state => state.status === 'running')
@@ -84,6 +89,15 @@ export default function LogToolbar() {
       <button className="btn-ghost p-1 rounded" title="复制可见日志" onClick={handleCopyVisible}>
         <Copy size={14} />
       </button>
+      {!isFloating && (
+        <button
+          className="btn-ghost p-1 rounded"
+          title="最大化日志面板"
+          onClick={() => setIsFloating(true)}
+        >
+          <Maximize2 size={14} />
+        </button>
+      )}
       <button className="btn-ghost p-1 rounded" title="清除日志" onClick={clearLog}>
         <Trash2 size={14} />
       </button>

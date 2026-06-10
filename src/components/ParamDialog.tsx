@@ -4,6 +4,7 @@ import { useFavoriteStore } from '../store/favoriteStore'
 import ParamField from './ParamField'
 import { X, BookmarkPlus } from 'lucide-react'
 import { RunRequest } from '../types'
+import { templateToAdbArgs } from '../utils/argParser'
 
 export default function ParamDialog() {
   const paramDialog = useCommandStore(s => s.paramDialog)
@@ -71,38 +72,7 @@ export default function ParamDialog() {
 
     // 构造 RunRequest
     const cmdId = crypto.randomUUID()
-    const resolvedArgs: string[] = []
-    let remaining = command.template
-
-    // 按 template 顺序拼接参数
-    // 例如 "adb push {src} {dst}" → 提取出各部分
-    const parts = command.template.split(/(\{[^}]+\}|\s+)/).filter(Boolean)
-    for (const part of parts) {
-      const match = part.match(/^\{(\w+)\}$/)
-      if (match) {
-        resolvedArgs.push(values[match[1]] || '')
-      } else if (part.trim()) {
-        resolvedArgs.push(part.trim())
-      }
-    }
-
-    // 更简单的方法：直接以空格分割 template，替换占位符后执行
-    // 对于复杂命令（如 screencap 中的 &&），直接看是否包含 shell 特殊字符
-    const args = command.template.split(/\s+/).slice(1) // 去掉 "adb"
-    const finalArgs: string[] = []
-    for (const arg of args) {
-      const match = arg.match(/^\{(\w+)\}$/)
-      if (match) {
-        finalArgs.push(values[match[1]] || '')
-      } else {
-        // 可能包含占位符，需要替换
-        let resolved = arg
-        for (const [key, val] of Object.entries(values)) {
-          resolved = resolved.replace(`{${key}}`, val)
-        }
-        finalArgs.push(resolved)
-      }
-    }
+    const finalArgs = templateToAdbArgs(command.template, values)
 
     const request: RunRequest = { cmdId, commandId: command.id, resolvedArgs: finalArgs }
 

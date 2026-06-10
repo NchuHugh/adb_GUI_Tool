@@ -1,11 +1,11 @@
 {
   "name": "adb-gui",
-  "version": "1.0.0",
+  "version": "1.1.1",
   "description": "ADB GUI 调试工具 — 面向 Android 专业开发人员的桌面 ADB 命令封装工具",
-  "author": "adb-gui team",
+  "author": "Hugh",
   "main": "dist-electron/main.js",
   "build": {
-    "appId": "com.yourteam.adb-gui",
+    "appId": "com.hugh.adb-gui",
     "productName": "ADB GUI",
     "files": [
       "dist-electron/**/*",

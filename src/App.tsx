@@ -15,7 +15,9 @@ import { useCommandStore } from './store/commandStore'
 import { useDeviceStore } from './store/deviceStore'
 import { useLogStore } from './store/logStore'
 import { useFavoriteStore } from './store/favoriteStore'
+import { useDevicePathStore } from './store/devicePathStore'
 import { HistoryEntry, ExecutionState } from './types'
+import { LogContentHandle } from './components/log/LogContent'
 
 export default function App() {
   const setConfig = useCommandStore(s => s.setConfig)
@@ -38,6 +40,9 @@ export default function App() {
   // 用 ref 累积命令输出（避免渲染重绘）
   const outputBuffers = useRef<Map<string, string>>(new Map())
 
+  // Phase 7 N2: 暴露给日志面板的滚动控制句柄（用于新段打开后主动滚动）
+  const logContentRef = useRef<LogContentHandle>(null)
+
   useEffect(() => {
     // 加载命令配置
     window.electronAPI.getCommands().then(config => {
@@ -51,6 +56,10 @@ export default function App() {
 
     // F3: 加载收藏
     useFavoriteStore.getState().loadFavorites()
+
+    // Phase 7 N3: 加载设备路径（内置 + 自定义）
+    useDevicePathStore.getState().loadBuiltin()
+    useDevicePathStore.getState().loadCustom()
 
     // 监听设备状态
     const unsubDevices = window.electronAPI.onDeviceStatus((devices) => {
@@ -78,6 +87,11 @@ export default function App() {
           resolvedCommand,
           startedAt: Date.now(),
         })
+        // Phase 7 N2: 逆序模式下新段插入到顶部，主动滚动到顶部
+        if (useLogStore.getState().segmentOrderDisplay === 'desc' && useLogStore.getState().autoScroll) {
+          // 延迟到下一帧，确保 DOM 已更新
+          requestAnimationFrame(() => logContentRef.current?.scrollToTop())
+        }
       }
 
       const now = Date.now()
@@ -132,12 +146,28 @@ export default function App() {
           resolvedCommand,
           startedAt: Date.now() - event.durationMs,
         })
+        // Phase 7 N2: 逆序模式下新段插入到顶部，主动滚动到顶部
+        if (useLogStore.getState().segmentOrderDisplay === 'desc' && useLogStore.getState().autoScroll) {
+          requestAnimationFrame(() => logContentRef.current?.scrollToTop())
+        }
       }
       closeSegment(event.cmdId, event.exitCode, event.reason)
 
       // 缓存输出（F4 FillPicker 用）
+      // Phase 7 N4: 仅对 fillable !== false 的命令写入 outputCache；
+      // 且对 fillable 未定义的未知命令，输出超过 5 行时不写入
       if (meta && output.trim()) {
-        setOutputCache(meta.commandId, output)
+        const command = useCommandStore.getState().commands.find(c => c.id === meta.commandId)
+        if (command && command.fillable !== false) {
+          if (command.fillable === true) {
+            setOutputCache(meta.commandId, output)
+          } else {
+            const lineCount = output.split('\n').filter(l => l.trim()).length
+            if (lineCount <= 5) {
+              setOutputCache(meta.commandId, output)
+            }
+          }
+        }
       }
 
       if (meta) {
@@ -188,14 +218,14 @@ export default function App() {
             <>
               <LogResizeHandle onResize={resizeLogPanel} />
               <div style={{ height: logPanelHeight, flexShrink: 0 }} className="min-h-0">
-                <LogPanel />
+                <LogPanel ref={logContentRef} />
               </div>
             </>
           )}
         </div>
       </div>
 
-      {isLogFloating && <LogFloatOverlay />}
+      {isLogFloating && <LogFloatOverlay ref={logContentRef} />}
 
       {/* F1: adb 未找到模态框 */}
       <AdbMissingModal />

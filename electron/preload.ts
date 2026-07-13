@@ -81,6 +81,11 @@ const electronAPI = {
   // F3: 收藏功能
   loadFavorites: () => ipcRenderer.invoke(IPC_CHANNELS.FAVORITES_LOAD),
   saveFavorites: (entries: any[]) => ipcRenderer.invoke(IPC_CHANNELS.FAVORITES_SAVE, entries),
+
+  // Phase 7 N3：常用设备路径
+  loadBuiltinDevicePaths: () => ipcRenderer.invoke(IPC_CHANNELS.DEVICE_PATHS_LOAD_BUILTIN),
+  loadCustomDevicePaths: () => ipcRenderer.invoke(IPC_CHANNELS.DEVICE_PATHS_LOAD_CUSTOM),
+  saveCustomDevicePaths: (paths: any[]) => ipcRenderer.invoke(IPC_CHANNELS.DEVICE_PATHS_SAVE_CUSTOM, paths),
 }
 
 contextBridge.exposeInMainWorld('electronAPI', electronAPI)

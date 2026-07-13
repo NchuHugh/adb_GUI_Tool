@@ -48,6 +48,7 @@ export default function CommandEditor() {
   const [outputMode, setOutputMode] = useState<OutputMode>('once')
   const [timeout, setTimeout_] = useState(10000)
   const [tags, setTags] = useState('')
+  const [fillable, setFillable] = useState<'' | 'true' | 'false'>('')
   const [error, setError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
   const [successMsg, setSuccessMsg] = useState<string | null>(null)
@@ -77,6 +78,7 @@ export default function CommandEditor() {
     setOutputMode(formData.outputMode)
     setTimeout_(formData.timeout)
     setTags(formData.tags)
+    setFillable(formData.fillable)
     setError(null)
     setSuccessMsg(null)
   }, [isOpen, editingCommand, prefilledTemplate, groups])
@@ -150,7 +152,7 @@ export default function CommandEditor() {
 
     // 编辑模式下保留自定义标记
     const commandDef = formDataToCommandDef(
-      { id, groupId, label, description, template, params, outputMode, timeout, tags },
+      { id, groupId, label, description, template, params, outputMode, timeout, tags, fillable },
       true
     )
 
@@ -309,6 +311,21 @@ export default function CommandEditor() {
             />
           </div>
 
+          {/* Phase 7 N4：一键填入来源设置 */}
+          <div className="flex items-center gap-3">
+            <label className="text-sm text-slate-300 whitespace-nowrap">一键填入来源</label>
+            <select
+              value={fillable}
+              onChange={e => setFillable(e.target.value as '' | 'true' | 'false')}
+              className="bg-slate-700 rounded px-2 py-1 text-sm border border-slate-600 focus:outline-none focus:border-blue-500"
+            >
+              <option value="">自动（超 5 行时排除）</option>
+              <option value="true">始终作为来源</option>
+              <option value="false">从不作为来源</option>
+            </select>
+            <span className="text-xs text-slate-500">控制此命令的输出是否出现在「一键填入」来源列表中</span>
+          </div>
+
           {/* 参数定义 */}
           <div>
             <div className="flex items-center justify-between mb-2">
@@ -428,7 +445,7 @@ export default function CommandEditor() {
               {template}
             </pre>
             <p className="text-xs text-slate-500 mt-0.5">
-              参数: {params.length} 个 · 超时: {timeout === 0 ? '不超时' : `${timeout}ms`} · 输出: {outputMode}
+              参数: {params.length} 个 · 超时: {timeout === 0 ? '不超时' : `${timeout}ms`} · 输出: {outputMode} · 填入来源: {fillable === 'true' ? '始终' : fillable === 'false' ? '从不' : '自动'}
             </p>
           </div>
 

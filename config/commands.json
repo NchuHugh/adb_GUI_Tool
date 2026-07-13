@@ -19,7 +19,8 @@
       "params": [],
       "outputMode": "stream",
       "timeout": 10000,
-      "tags": ["root", "device"]
+      "tags": ["root", "device"],
+      "fillable": false
     },
     {
       "id": "adb_unroot",
@@ -30,7 +31,8 @@
       "params": [],
       "outputMode": "stream",
       "timeout": 10000,
-      "tags": ["root", "device"]
+      "tags": ["root", "device"],
+      "fillable": false
     },
     {
       "id": "adb_remount",
@@ -41,7 +43,8 @@
       "params": [],
       "outputMode": "stream",
       "timeout": 10000,
-      "tags": ["root", "device"]
+      "tags": ["root", "device"],
+      "fillable": false
     },
     {
       "id": "adb_reboot",
@@ -52,7 +55,8 @@
       "params": [],
       "outputMode": "once",
       "timeout": 30000,
-      "tags": ["device", "reboot"]
+      "tags": ["device", "reboot"],
+      "fillable": false
     },
     {
       "id": "adb_reboot_bootloader",
@@ -63,7 +67,8 @@
       "params": [],
       "outputMode": "once",
       "timeout": 30000,
-      "tags": ["device", "reboot"]
+      "tags": ["device", "reboot"],
+      "fillable": false
     },
     {
       "id": "adb_reboot_recovery",
@@ -74,7 +79,8 @@
       "params": [],
       "outputMode": "once",
       "timeout": 30000,
-      "tags": ["device", "reboot"]
+      "tags": ["device", "reboot"],
+      "fillable": false
     },
     {
       "id": "adb_devices",
@@ -107,7 +113,8 @@
       "params": [],
       "outputMode": "stream",
       "timeout": 120000,
-      "tags": ["device"]
+      "tags": ["device"],
+      "fillable": false
     },
     {
       "id": "adb_connect",
@@ -121,7 +128,8 @@
       ],
       "outputMode": "stream",
       "timeout": 10000,
-      "tags": ["device", "network"]
+      "tags": ["device", "network"],
+      "fillable": false
     },
     {
       "id": "adb_disconnect",
@@ -135,7 +143,8 @@
       ],
       "outputMode": "stream",
       "timeout": 10000,
-      "tags": ["device", "network"]
+      "tags": ["device", "network"],
+      "fillable": false
     },
     {
       "id": "adb_push",
@@ -176,7 +185,8 @@
       ],
       "outputMode": "once",
       "timeout": 10000,
-      "tags": ["file"]
+      "tags": ["file"],
+      "fillable": true
     },
     {
       "id": "adb_rm",
@@ -252,7 +262,8 @@
       "params": [],
       "outputMode": "once",
       "timeout": 10000,
-      "tags": ["app", "packages"]
+      "tags": ["app", "packages"],
+      "fillable": true
     },
     {
       "id": "adb_pm_list_packages_3rd",
@@ -263,7 +274,8 @@
       "params": [],
       "outputMode": "once",
       "timeout": 10000,
-      "tags": ["app", "packages"]
+      "tags": ["app", "packages"],
+      "fillable": true
     },
     {
       "id": "adb_pm_path",
@@ -276,7 +288,8 @@
       ],
       "outputMode": "once",
       "timeout": 5000,
-      "tags": ["app", "packages"]
+      "tags": ["app", "packages"],
+      "fillable": true
     },
     {
       "id": "adb_am_start",
@@ -302,7 +315,8 @@
       ],
       "outputMode": "once",
       "timeout": 5000,
-      "tags": ["app"]
+      "tags": ["app"],
+      "fillable": false
     },
     {
       "id": "adb_am_clear_data",
@@ -315,7 +329,8 @@
       ],
       "outputMode": "once",
       "timeout": 10000,
-      "tags": ["app"]
+      "tags": ["app"],
+      "fillable": false
     },
     {
       "id": "adb_dumpsys_activity",
@@ -328,7 +343,8 @@
       ],
       "outputMode": "once",
       "timeout": 10000,
-      "tags": ["app", "debug"]
+      "tags": ["app", "debug"],
+      "fillable": false
     },
     {
       "id": "adb_dumpsys_meminfo",
@@ -341,7 +357,8 @@
       ],
       "outputMode": "once",
       "timeout": 10000,
-      "tags": ["app", "debug", "memory"]
+      "tags": ["app", "debug", "memory"],
+      "fillable": false
     },
     {
       "id": "adb_logcat",
@@ -352,7 +369,8 @@
       "params": [],
       "outputMode": "stream",
       "timeout": 0,
-      "tags": ["log", "stream"]
+      "tags": ["log", "stream"],
+      "fillable": false
     },
     {
       "id": "adb_logcat_tag",
@@ -365,7 +383,8 @@
       ],
       "outputMode": "stream",
       "timeout": 0,
-      "tags": ["log"]
+      "tags": ["log"],
+      "fillable": false
     },
     {
       "id": "adb_logcat_clear",
@@ -376,7 +395,8 @@
       "params": [],
       "outputMode": "once",
       "timeout": 5000,
-      "tags": ["log"]
+      "tags": ["log"],
+      "fillable": false
     },
     {
       "id": "adb_shell_pidof",
@@ -389,7 +409,8 @@
       ],
       "outputMode": "once",
       "timeout": 10000,
-      "tags": ["shell", "log"]
+      "tags": ["shell", "log"],
+      "fillable": true
     },
     {
       "id": "adb_logcat_package",
@@ -411,7 +432,8 @@
       ],
       "outputMode": "stream",
       "timeout": 0,
-      "tags": ["log"]
+      "tags": ["log"],
+      "fillable": false
     },
     {
       "id": "adb_bugreport",
@@ -424,7 +446,8 @@
       ],
       "outputMode": "stream",
       "timeout": 120000,
-      "tags": ["log", "debug"]
+      "tags": ["log", "debug"],
+      "fillable": false
     },
     {
       "id": "adb_getprop",
@@ -448,7 +471,8 @@
       ],
       "outputMode": "once",
       "timeout": 5000,
-      "tags": ["props"]
+      "tags": ["props"],
+      "fillable": true
     },
     {
       "id": "adb_setprop",
@@ -476,7 +500,8 @@
       ],
       "outputMode": "once",
       "timeout": 5000,
-      "tags": ["props", "settings"]
+      "tags": ["props", "settings"],
+      "fillable": true
     },
     {
       "id": "adb_settings_put",
@@ -516,7 +541,8 @@
       "params": [],
       "outputMode": "once",
       "timeout": 5000,
-      "tags": ["network"]
+      "tags": ["network"],
+      "fillable": true
     },
     {
       "id": "adb_forward_remove",
@@ -554,7 +580,8 @@
       ],
       "outputMode": "once",
       "timeout": 10000,
-      "tags": ["network", "tcpip"]
+      "tags": ["network", "tcpip"],
+      "fillable": false
     },
     {
       "id": "adb_shell",
@@ -580,7 +607,8 @@
       ],
       "outputMode": "stream",
       "timeout": 30000,
-      "tags": ["shell", "screenshot"]
+      "tags": ["shell", "screenshot"],
+      "fillable": false
     },
     {
       "id": "adb_screenrecord",
@@ -591,7 +619,8 @@
       "params": [],
       "outputMode": "stream",
       "timeout": 0,
-      "tags": ["shell", "record"]
+      "tags": ["shell", "record"],
+      "fillable": false
     },
     {
       "id": "adb_input_text",
@@ -604,7 +633,8 @@
       ],
       "outputMode": "once",
       "timeout": 5000,
-      "tags": ["shell", "input"]
+      "tags": ["shell", "input"],
+      "fillable": false
     },
     {
       "id": "adb_input_keyevent",
@@ -630,7 +660,8 @@
       ],
       "outputMode": "once",
       "timeout": 5000,
-      "tags": ["shell", "input", "keyevent"]
+      "tags": ["shell", "input", "keyevent"],
+      "fillable": false
     }
   ]
 }

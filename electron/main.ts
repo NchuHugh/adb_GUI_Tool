@@ -251,6 +251,56 @@ function registerIpcHandlers() {
       console.error('[Main] 保存收藏失败:', err)
     }
   })
+
+  // Phase 7 N3：加载内置设备路径配置
+  ipcMain.handle(IPC_CHANNELS.DEVICE_PATHS_LOAD_BUILTIN, async () => {
+    const builtinPath = path.join(__dirname, '../config', 'device-paths.json')
+    try {
+      if (fs.existsSync(builtinPath)) {
+        const raw = fs.readFileSync(builtinPath, 'utf-8')
+        return JSON.parse(raw)
+      }
+    } catch (err) {
+      console.error('[Main] 读取内置设备路径失败:', err)
+    }
+    return { version: '1.0', groups: [] }
+  })
+
+  // Phase 7 N3：加载用户自定义设备路径
+  ipcMain.handle(IPC_CHANNELS.DEVICE_PATHS_LOAD_CUSTOM, async () => {
+    const customPath = path.join(
+      process.env.APPDATA || path.join(process.env.HOME || '', 'AppData', 'Roaming'),
+      'adb-gui',
+      'custom-paths.json'
+    )
+    try {
+      if (fs.existsSync(customPath)) {
+        const raw = fs.readFileSync(customPath, 'utf-8')
+        const parsed = JSON.parse(raw)
+        return Array.isArray(parsed) ? parsed : []
+      }
+    } catch (err) {
+      console.error('[Main] 读取自定义设备路径失败:', err)
+    }
+    return []
+  })
+
+  // Phase 7 N3：保存用户自定义设备路径
+  ipcMain.handle(IPC_CHANNELS.DEVICE_PATHS_SAVE_CUSTOM, async (_event, paths: any[]) => {
+    const appDataDir = path.join(
+      process.env.APPDATA || path.join(process.env.HOME || '', 'AppData', 'Roaming'),
+      'adb-gui'
+    )
+    const customPath = path.join(appDataDir, 'custom-paths.json')
+    try {
+      if (!fs.existsSync(appDataDir)) {
+        fs.mkdirSync(appDataDir, { recursive: true })
+      }
+      fs.writeFileSync(customPath, JSON.stringify(paths, null, 2), 'utf-8')
+    } catch (err) {
+      console.error('[Main] 保存自定义设备路径失败:', err)
+    }
+  })
 }
 
 app.whenReady().then(async () => {

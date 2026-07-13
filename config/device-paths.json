@@ -1,0 +1,39 @@
+{
+  "version": "1.0",
+  "groups": [
+    {
+      "id": "system_app",
+      "label": "系统应用",
+      "paths": [
+        { "id": "p001", "label": "SystemUI", "path": "/system_ext/priv-app/SystemUI/" },
+        { "id": "p002", "label": "Settings", "path": "/system_ext/priv-app/Settings/" },
+        { "id": "p003", "label": "Launcher", "path": "/system_ext/priv-app/Launcher3/" },
+        { "id": "p004", "label": "system/app", "path": "/system/app/" },
+        { "id": "p005", "label": "system/priv-app", "path": "/system/priv-app/" },
+        { "id": "p006", "label": "system_ext/app", "path": "/system_ext/app/" },
+        { "id": "p007", "label": "system_ext/priv-app", "path": "/system_ext/priv-app/" },
+        { "id": "p008", "label": "vendor/app", "path": "/vendor/app/" },
+        { "id": "p009", "label": "product/app", "path": "/product/app/" }
+      ]
+    },
+    {
+      "id": "storage",
+      "label": "存储",
+      "paths": [
+        { "id": "p010", "label": "sdcard 根目录", "path": "/sdcard/" },
+        { "id": "p011", "label": "sdcard/Download", "path": "/sdcard/Download/" },
+        { "id": "p012", "label": "data/local/tmp", "path": "/data/local/tmp/" }
+      ]
+    },
+    {
+      "id": "config",
+      "label": "配置与日志",
+      "paths": [
+        { "id": "p013", "label": "data/data（应用数据）", "path": "/data/data/" },
+        { "id": "p014", "label": "data/log", "path": "/data/log/" },
+        { "id": "p015", "label": "data/tombstones", "path": "/data/tombstones/" },
+        { "id": "p016", "label": "etc/permissions", "path": "/system/etc/permissions/" }
+      ]
+    }
+  ]
+}

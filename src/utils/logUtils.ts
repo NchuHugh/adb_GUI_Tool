@@ -135,11 +135,16 @@ export function buildRenderItems(state: {
   segmentOrder: string[]
   segments: Map<string, LogSegment>
   visibleLineIds: string[]
+  segmentOrderDisplay?: 'asc' | 'desc'
 }): LogRenderItem[] {
   const items: LogRenderItem[] = []
   const visibleLineIds = new Set(state.visibleLineIds)
 
-  for (const cmdId of state.segmentOrder) {
+  const orderedSegmentIds = state.segmentOrderDisplay === 'desc'
+    ? [...state.segmentOrder].reverse()
+    : state.segmentOrder
+
+  for (const cmdId of orderedSegmentIds) {
     const segment = state.segments.get(cmdId)
     if (!segment) continue
     items.push({ type: 'segment-header', cmdId })

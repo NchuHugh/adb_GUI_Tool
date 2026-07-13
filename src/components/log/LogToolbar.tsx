@@ -1,4 +1,4 @@
-import { ChevronDown, ChevronUp, Copy, Trash2, Square, Maximize2 } from 'lucide-react'
+import { ArrowDownToLine, ArrowUpToLine, ChevronDown, ChevronUp, Copy, Trash2, Square, Maximize2 } from 'lucide-react'
 import { useCommandStore } from '../../store/commandStore'
 import { useLogStore } from '../../store/logStore'
 import { LogLevel } from '../../types'
@@ -17,10 +17,12 @@ export default function LogToolbar({ isFloating = false }: Props) {
   const levelFilter = useLogStore(s => s.levelFilter)
   const streamFilter = useLogStore(s => s.streamFilter)
   const autoScroll = useLogStore(s => s.autoScroll)
+  const segmentOrderDisplay = useLogStore(s => s.segmentOrderDisplay)
   const setAutoScroll = useLogStore(s => s.setAutoScroll)
   const clearLog = useLogStore(s => s.clearLog)
   const collapseAll = useLogStore(s => s.collapseAll)
   const expandAll = useLogStore(s => s.expandAll)
+  const toggleSegmentOrder = useLogStore(s => s.toggleSegmentOrder)
   const toggleLevelFilter = useLogStore(s => s.toggleLevelFilter)
   const setLevelFilter = useLogStore(s => s.setLevelFilter)
   const setStreamFilter = useLogStore(s => s.setStreamFilter)
@@ -64,6 +66,20 @@ export default function LogToolbar({ isFloating = false }: Props) {
       <button className="btn-ghost px-2 py-1 rounded text-xs flex items-center gap-1" onClick={expandAll}>
         <ChevronUp size={13} />
         全部展开
+      </button>
+      <button
+        onClick={toggleSegmentOrder}
+        title={segmentOrderDisplay === 'asc' ? '切换为逆序（最新在上）' : '切换为正序（最新在下）'}
+        className={`flex items-center gap-1 px-2 py-1 rounded text-xs transition-colors ${
+          segmentOrderDisplay === 'desc'
+            ? 'bg-blue-500/20 text-blue-400'
+            : 'text-slate-400 hover:text-slate-200 hover:bg-slate-700'
+        }`}
+      >
+        {segmentOrderDisplay === 'desc'
+          ? <><ArrowDownToLine size={13} /> 逆序</>
+          : <><ArrowUpToLine size={13} /> 正序</>
+        }
       </button>
 
       <div className="h-5 border-l border-divider" />

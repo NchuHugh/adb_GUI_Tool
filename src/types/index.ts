@@ -73,6 +73,13 @@ export interface CommandDef {
   invalidReason?: string
   /** 用户自定义添加的命令 */
   custom?: boolean
+  /**
+   * Phase 7 N4：命令输出是否适合作为一键填入来源
+   * true  = 明确适合（如 pm list packages、pm path）
+   * false = 明确不适合（如 logcat、root、remount）
+   * undefined = 由运行时规则决定（超 5 行时排除）
+   */
+  fillable?: boolean
 }
 
 export interface CommandGroup {
@@ -166,6 +173,27 @@ export type LogRenderItem =
   | { type: 'segment-header'; cmdId: string }
   | { type: 'line'; lineId: string }
 
+// ---- Phase 7 N3：常用设备路径 ----
+
+export interface DevicePath {
+  id: string
+  label: string
+  path: string
+  /** true = 用户自定义；false/undefined = 内置 */
+  custom?: boolean
+}
+
+export interface DevicePathGroup {
+  id: string
+  label: string
+  paths: DevicePath[]
+}
+
+export interface DevicePathConfig {
+  version: string
+  groups: DevicePathGroup[]
+}
+
 // ---- IPC 通道名称常量 ----
 
 export const IPC_CHANNELS = {
@@ -181,6 +209,10 @@ export const IPC_CHANNELS = {
   COMMANDS_UPDATE: 'commands:update',
   FAVORITES_LOAD: 'favorites:load',
   FAVORITES_SAVE: 'favorites:save',
+  // Phase 7 N3：常用设备路径
+  DEVICE_PATHS_LOAD_BUILTIN: 'device-paths:load-builtin',
+  DEVICE_PATHS_LOAD_CUSTOM: 'device-paths:load-custom',
+  DEVICE_PATHS_SAVE_CUSTOM: 'device-paths:save-custom',
 } as const
 
 // ---- contextBridge 暴露的 API 类型 ----
@@ -207,6 +239,10 @@ export interface ElectronAPI {
   updateCommand: (command: CommandDef) => Promise<{ success: boolean; error?: string; config?: CommandsConfig }>
   loadFavorites: () => Promise<FavoriteEntry[]>
   saveFavorites: (entries: FavoriteEntry[]) => Promise<void>
+  // Phase 7 N3：常用设备路径
+  loadBuiltinDevicePaths: () => Promise<DevicePathConfig>
+  loadCustomDevicePaths: () => Promise<DevicePath[]>
+  saveCustomDevicePaths: (paths: DevicePath[]) => Promise<void>
 }
 
 // 扩展 Window 接口

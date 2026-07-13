@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { CheckCircle2, CheckCheck, ChevronDown, ChevronRight, Clock, Copy, Loader2, Square, XCircle } from 'lucide-react'
+import { useEffect, useRef, useState } from 'react'
+import { CheckCircle2, CheckCheck, ChevronDown, ChevronRight, Clock, Copy, Loader2, Square, Trash2, XCircle } from 'lucide-react'
 import { LogSegment } from '../../types'
 import { useLogStore } from '../../store/logStore'
 
@@ -36,14 +36,43 @@ function SegmentStatus({ segment }: { segment: LogSegment }) {
 
 export default function LogSegmentHeader({ segment, onToggle }: Props) {
   const [copied, setCopied] = useState(false)
+  const [deleteState, setDeleteState] = useState<'idle' | 'confirming'>('idle')
+  const confirmTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const getSegmentText = useLogStore(s => s.getSegmentText)
+  const deleteSegment = useLogStore(s => s.deleteSegment)
   const duration = formatDuration(segment)
 
-  const handleCopySegment = () => {
+  useEffect(() => {
+    return () => {
+      if (confirmTimerRef.current) clearTimeout(confirmTimerRef.current)
+    }
+  }, [])
+
+  const handleCopySegment = (e: React.MouseEvent) => {
+    e.stopPropagation()
     const text = getSegmentText(segment.cmdId)
     window.electronAPI.copyToClipboard(text)
     setCopied(true)
     setTimeout(() => setCopied(false), 1500)
+  }
+
+  const handleDeleteClick = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    setDeleteState('confirming')
+    if (confirmTimerRef.current) clearTimeout(confirmTimerRef.current)
+    confirmTimerRef.current = setTimeout(() => setDeleteState('idle'), 3000)
+  }
+
+  const handleConfirmDelete = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    if (confirmTimerRef.current) clearTimeout(confirmTimerRef.current)
+    deleteSegment(segment.cmdId)
+  }
+
+  const handleCancelDelete = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    if (confirmTimerRef.current) clearTimeout(confirmTimerRef.current)
+    setDeleteState('idle')
   }
 
   return (
@@ -70,12 +99,9 @@ export default function LogSegmentHeader({ segment, onToggle }: Props) {
       <span className="text-xs text-slate-500 flex-shrink-0">
         {formatTime(segment.startedAt)}
       </span>
-      {segment.endedAt && (
+      {segment.endedAt && deleteState === 'idle' && (
         <button
-          onClick={(e) => {
-            e.stopPropagation()
-            handleCopySegment()
-          }}
+          onClick={handleCopySegment}
           title="复制此命令的输出"
           className="opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded text-slate-500 hover:text-slate-200 hover:bg-slate-700"
         >
@@ -84,6 +110,33 @@ export default function LogSegmentHeader({ segment, onToggle }: Props) {
             : <Copy size={13} />
           }
         </button>
+      )}
+      {segment.endedAt && deleteState === 'idle' && (
+        <button
+          onClick={handleDeleteClick}
+          title="删除此命令的输出"
+          className="opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded text-slate-500 hover:text-red-400 hover:bg-slate-700"
+        >
+          <Trash2 size={13} />
+        </button>
+      )}
+      {segment.endedAt && deleteState === 'confirming' && (
+        <div className="flex items-center gap-1 flex-shrink-0">
+          <button
+            onClick={handleCancelDelete}
+            title="取消"
+            className="px-1.5 py-0.5 rounded text-xs text-slate-300 hover:bg-slate-700"
+          >
+            取消
+          </button>
+          <button
+            onClick={handleConfirmDelete}
+            title="确认删除"
+            className="px-1.5 py-0.5 rounded text-xs text-white bg-red-600 hover:bg-red-500"
+          >
+            确认删除
+          </button>
+        </div>
       )}
       <SegmentStatus segment={segment} />
     </div>

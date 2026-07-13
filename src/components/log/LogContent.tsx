@@ -1,4 +1,4 @@
-import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from 'react'
+import { forwardRef, useCallback, useDeferredValue, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react'
 import { useLogStore } from '../../store/logStore'
 import { buildRenderItems, getVisibleLineIds } from '../../utils/logUtils'
 import LogLine from './LogLine'
@@ -19,7 +19,12 @@ function throttle<T extends (...args: never[]) => void>(fn: T, ms: number): T {
   }) as T
 }
 
-export default function LogContent() {
+export interface LogContentHandle {
+  scrollToTop: () => void
+  scrollToBottom: () => void
+}
+
+const LogContent = forwardRef<LogContentHandle>(function LogContent(_props, ref) {
   const parentRef = useRef<HTMLDivElement>(null)
   const [scrollTop, setScrollTop] = useState(0)
   const [viewportHeight, setViewportHeight] = useState(240)
@@ -28,6 +33,7 @@ export default function LogContent() {
   const lineOrder = useLogStore(s => s.lineOrder)
   const segments = useLogStore(s => s.segments)
   const segmentOrder = useLogStore(s => s.segmentOrder)
+  const segmentOrderDisplay = useLogStore(s => s.segmentOrderDisplay)
   const levelFilter = useLogStore(s => s.levelFilter)
   const streamFilter = useLogStore(s => s.streamFilter)
   const autoScroll = useLogStore(s => s.autoScroll)
@@ -49,8 +55,13 @@ export default function LogContent() {
       levelFilter,
       streamFilter,
     })
-    return buildRenderItems({ segmentOrder, segments, visibleLineIds })
-  }, [deferredLineOrder, lines, segments, segmentOrder, levelFilter, streamFilter])
+    return buildRenderItems({
+      segmentOrder,
+      segments,
+      visibleLineIds,
+      segmentOrderDisplay,
+    })
+  }, [deferredLineOrder, lines, segments, segmentOrder, segmentOrderDisplay, levelFilter, streamFilter])
 
   const offsets = useMemo(() => {
     const result: number[] = []
@@ -92,10 +103,26 @@ export default function LogContent() {
       if (!autoScroll || renderItems.length === 0) return
       const element = parentRef.current
       if (!element) return
-      element.scrollTop = Math.max(0, offsets.totalHeight - element.clientHeight)
+      // 逆序模式最新段在顶部，滚动到顶部；正序模式滚动到底部
+      if (segmentOrderDisplay === 'desc') {
+        element.scrollTop = 0
+      } else {
+        element.scrollTop = Math.max(0, offsets.totalHeight - element.clientHeight)
+      }
     }, 100),
-    [autoScroll, renderItems.length, offsets.totalHeight],
+    [autoScroll, renderItems.length, offsets.totalHeight, segmentOrderDisplay],
   )
+
+  useImperativeHandle(ref, () => ({
+    scrollToTop: () => {
+      const element = parentRef.current
+      if (element) element.scrollTop = 0
+    },
+    scrollToBottom: () => {
+      const element = parentRef.current
+      if (element) element.scrollTop = Math.max(0, offsets.totalHeight - element.clientHeight)
+    },
+  }), [offsets.totalHeight])
 
   useEffect(() => {
     scrollToBottom()
@@ -154,4 +181,6 @@ export default function LogContent() {
       )}
     </div>
   )
-}
+})
+
+export default LogContent

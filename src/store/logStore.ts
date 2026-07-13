@@ -31,6 +31,9 @@ interface LogStore {
   isFloating: boolean
   logPanelHeight: number
 
+  // Phase 7 N2: 日志分段排列顺序（'asc' = 正序，'desc' = 逆序）
+  segmentOrderDisplay: 'asc' | 'desc'
+
   // 历史记录（最多 50 条）
   history: HistoryEntry[]
 
@@ -49,8 +52,10 @@ interface LogStore {
   openSegment: (cmdId: string, meta: Pick<LogSegment, 'commandLabel' | 'resolvedCommand' | 'startedAt'>) => void
   closeSegment: (cmdId: string, exitCode: number, reason: DoneEvent['reason']) => void
   toggleSegment: (cmdId: string) => void
+  deleteSegment: (cmdId: string) => void
   collapseAll: () => void
   expandAll: () => void
+  toggleSegmentOrder: () => void
   setSearchQuery: (query: string) => void
   setSearchOptions: (options: Partial<LogSearchOptions>) => void
   navigateMatch: (direction: 'next' | 'prev') => void
@@ -118,6 +123,10 @@ export const useLogStore = create<LogStore>((set, get) => ({
   logPanelHeight: (() => {
     const saved = localStorage.getItem('logPanelHeight')
     return saved ? parseInt(saved, 10) : 280
+  })(),
+  segmentOrderDisplay: (() => {
+    const saved = localStorage.getItem('logSegmentOrder')
+    return saved === 'desc' ? 'desc' : 'asc'
   })(),
   history: [],
   autoScroll: true,
@@ -208,6 +217,43 @@ export const useLogStore = create<LogStore>((set, get) => ({
     })
   },
 
+  deleteSegment: (cmdId) => {
+    const segment = get().segments.get(cmdId)
+    if (!segment) return
+
+    const deletedSet = new Set(segment.lineIds)
+
+    const newLines = new Map(get().lines)
+    for (const lineId of segment.lineIds) {
+      newLines.delete(lineId)
+    }
+
+    const newLineOrder = get().lineOrder.filter(id => !deletedSet.has(id))
+
+    const newSegments = new Map(get().segments)
+    newSegments.delete(cmdId)
+    const newSegmentOrder = get().segmentOrder.filter(id => id !== cmdId)
+
+    const newOutputCache = new Map(get().outputCache)
+    newOutputCache.delete(cmdId)
+
+    const newMatchedLineIds = get().matchedLineIds.filter(id => !deletedSet.has(id))
+    const newActiveMatchIndex = Math.min(
+      get().activeMatchIndex,
+      newMatchedLineIds.length - 1,
+    )
+
+    set({
+      lines: newLines,
+      lineOrder: newLineOrder,
+      segments: newSegments,
+      segmentOrder: newSegmentOrder,
+      outputCache: newOutputCache,
+      matchedLineIds: newMatchedLineIds,
+      activeMatchIndex: Math.max(-1, newActiveMatchIndex),
+    })
+  },
+
   toggleSegment: (cmdId) => {
     set((state) => {
       const segment = state.segments.get(cmdId)
@@ -233,6 +279,12 @@ export const useLogStore = create<LogStore>((set, get) => ({
       const nextState = { ...state, segments }
       return { segments, ...computeMatches(nextState) }
     })
+  },
+
+  toggleSegmentOrder: () => {
+    const next = get().segmentOrderDisplay === 'asc' ? 'desc' : 'asc'
+    localStorage.setItem('logSegmentOrder', next)
+    set({ segmentOrderDisplay: next })
   },
 
   setSearchQuery: (searchQuery) => {

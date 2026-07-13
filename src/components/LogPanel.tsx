@@ -1,5 +1,6 @@
+import { forwardRef } from 'react'
 import { useLogStore } from '../store/logStore'
-import LogContent from './log/LogContent'
+import LogContent, { LogContentHandle } from './log/LogContent'
 import LogSearchBar from './log/LogSearchBar'
 import LogToolbar from './log/LogToolbar'
 
@@ -7,7 +8,7 @@ interface Props {
   isFloating?: boolean
 }
 
-export default function LogPanel({ isFloating = false }: Props) {
+const LogPanel = forwardRef<LogContentHandle, Props>(function LogPanel({ isFloating = false }: Props, ref) {
   const searchQuery = useLogStore(s => s.searchQuery)
   const searchOptions = useLogStore(s => s.searchOptions)
   const searchError = useLogStore(s => s.searchError)
@@ -30,7 +31,9 @@ export default function LogPanel({ isFloating = false }: Props) {
         onOptionsChange={setSearchOptions}
         onNavigate={navigateMatch}
       />
-      <LogContent />
+      <LogContent ref={ref} />
     </div>
   )
-}
+})
+
+export default LogPanel

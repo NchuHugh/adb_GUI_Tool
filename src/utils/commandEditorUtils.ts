@@ -11,9 +11,14 @@ export interface CommandEditorFormData {
   timeout: number
   tags: string
   params: CommandParam[]
+  /** Phase 7 N4：命令输出是否适合作为一键填入来源（'' = 自动） */
+  fillable: '' | 'true' | 'false'
 }
 
 export function commandDefToFormData(def: CommandDef): CommandEditorFormData {
+  let fillableVal: '' | 'true' | 'false' = ''
+  if (def.fillable === true) fillableVal = 'true'
+  else if (def.fillable === false) fillableVal = 'false'
   return {
     id: def.id ?? '',
     groupId: def.groupId,
@@ -24,6 +29,7 @@ export function commandDefToFormData(def: CommandDef): CommandEditorFormData {
     timeout: def.timeout,
     tags: def.tags?.join(', ') ?? '',
     params: def.params.map(p => ({ ...p })),
+    fillable: fillableVal,
   }
 }
 
@@ -37,6 +43,7 @@ export const EMPTY_FORM_DATA: CommandEditorFormData = {
   timeout: 10000,
   tags: '',
   params: [],
+  fillable: '',
 }
 
 export function formDataToCommandDef(
@@ -73,6 +80,9 @@ export function formDataToCommandDef(
   if (formData.tags.trim()) {
     cmd.tags = formData.tags.split(',').map(t => t.trim()).filter(Boolean)
   }
+  // Phase 7 N4：fillable 字段转换
+  if (formData.fillable === 'true') cmd.fillable = true
+  else if (formData.fillable === 'false') cmd.fillable = false
   if (isCustom) {
     cmd.custom = true
   }

@@ -1,9 +1,10 @@
-import { useEffect } from 'react'
+import { forwardRef, useEffect } from 'react'
 import { Minimize2 } from 'lucide-react'
 import LogPanel from '../LogPanel'
 import { useLogStore } from '../../store/logStore'
+import { LogContentHandle } from '../log/LogContent'
 
-export default function LogFloatOverlay() {
+const LogFloatOverlay = forwardRef<LogContentHandle>(function LogFloatOverlay(_props, ref) {
   const setIsFloating = useLogStore(s => s.setIsFloating)
 
   useEffect(() => {
@@ -31,8 +32,10 @@ export default function LogFloatOverlay() {
         </button>
       </div>
       <div className="flex-1 min-h-0">
-        <LogPanel isFloating />
+        <LogPanel isFloating ref={ref} />
       </div>
     </div>
   )
-}
+})
+
+export default LogFloatOverlay

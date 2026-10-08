@@ -27,17 +27,19 @@ export function createCustomGroup(input: Pick<CommandGroup, 'id' | 'label' | 'ic
 export function buildLogExportText(
   segmentOrder: string[],
   segmentOrderDisplay: 'asc' | 'desc',
-  segments: Map<string, { lineIds: string[] }>,
+  segments: Map<string, { lineIds: string[]; commandLabel?: string; resolvedCommand?: string }>,
   lines: Map<string, { raw: string; stream: string }>,
 ): string {
   const ordered = segmentOrderDisplay === 'desc' ? [...segmentOrder].reverse() : segmentOrder
   return ordered.map(id => {
     const segment = segments.get(id)
     if (!segment) return ''
-    return segment.lineIds
+    const output = segment.lineIds
       .map(lineId => lines.get(lineId))
       .filter((line): line is { raw: string; stream: string } => !!line && line.stream !== 'system')
       .map(line => line.raw)
       .join('\n')
+    const command = segment.resolvedCommand?.trim() || segment.commandLabel?.trim() || id
+    return [`命令: ${command}`, output].filter(Boolean).join('\n')
   }).join('\n\n----------------------------------------\n\n')
 }

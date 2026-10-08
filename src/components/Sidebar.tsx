@@ -4,6 +4,7 @@ import { useFavoriteStore } from '../store/favoriteStore'
 import * as Icons from 'lucide-react'
 import { Layers, Clock, Plus, Star } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
+import GroupManager from './GroupManager'
 
 // 将图标名称字符串映射到实际组件
 function getIcon(iconName: string): LucideIcon {
@@ -69,6 +70,7 @@ export default function Sidebar() {
 
       {/* 底部：新增命令 + 收藏 + 历史记录按钮 */}
       <div className="mt-auto border-t border-divider pt-2 pb-2 space-y-1">
+        <GroupManager />
         <button
           className="sidebar-group-item mx-2 w-full"
           onClick={() => openCommandEditor()}

@@ -3,7 +3,7 @@
 // 负责创建窗口、加载 preload、管理应用生命周期
 // ============================================================
 
-import { app, BrowserWindow, ipcMain, dialog, shell, clipboard } from 'electron'
+import { app, BrowserWindow, ipcMain, dialog, shell, clipboard, Menu } from 'electron'
 import path from 'path'
 import fs from 'fs'
 import { ConfigLoader } from './configLoader'
@@ -27,8 +27,9 @@ function createWindow() {
     minWidth: 960,
     minHeight: 600,
     backgroundColor: '#0f172a',
-    title: 'ADB GUI',
+    title: `ADB GUI v${app.getVersion()}`,
     titleBarStyle: 'default',
+    // 不创建应用菜单，避免 Windows 下按 Alt 唤出菜单栏。
     autoHideMenuBar: true,
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
@@ -38,6 +39,7 @@ function createWindow() {
       spellcheck: false,
     },
   })
+  mainWindow.setMenuBarVisibility(false)
 
   // 加载页面
   if (isDev && process.env.VITE_DEV_SERVER_URL) {
@@ -217,6 +219,35 @@ function registerIpcHandlers() {
     }
   })
 
+  ipcMain.handle(IPC_CHANNELS.COMMANDS_GROUP_CREATE, async (_event, group) => {
+    try { return { success: true, config: configLoader.createGroup(group) } }
+    catch (err: any) { return { success: false, error: err.message } }
+  })
+  ipcMain.handle(IPC_CHANNELS.COMMANDS_GROUP_UPDATE, async (_event, group) => {
+    try { return { success: true, config: configLoader.updateGroup(group) } }
+    catch (err: any) { return { success: false, error: err.message } }
+  })
+  ipcMain.handle(IPC_CHANNELS.COMMANDS_GROUP_DELETE, async (_event, id: string) => {
+    try { const result = configLoader.deleteGroup(id); return { success: true, ...result } }
+    catch (err: any) { return { success: false, error: err.message } }
+  })
+  ipcMain.handle(IPC_CHANNELS.LOG_EXPORT, async (_event, text: string) => {
+    if (!mainWindow) return { canceled: true }
+    try {
+      const result = await dialog.showSaveDialog(mainWindow, {
+        title: '导出日志',
+        defaultPath: 'adb-log.log',
+        filters: [{ name: '日志文件', extensions: ['log'] }],
+      })
+      if (result.canceled || !result.filePath) return { canceled: true }
+      const filePath = result.filePath.toLowerCase().endsWith('.log') ? result.filePath : `${result.filePath}.log`
+      fs.writeFileSync(filePath, text, 'utf-8')
+      return { canceled: false, path: filePath }
+    } catch (err: any) {
+      return { canceled: false, error: err.message }
+    }
+  })
+
   // F3: 加载收藏列表
   ipcMain.handle(IPC_CHANNELS.FAVORITES_LOAD, async () => {
     const favPath = path.join(
@@ -304,6 +335,8 @@ function registerIpcHandlers() {
 }
 
 app.whenReady().then(async () => {
+  Menu.setApplicationMenu(null)
+
   // 初始化各模块
   configLoader = new ConfigLoader()
   adbRunner = new AdbRunner()

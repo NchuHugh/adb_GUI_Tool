@@ -87,6 +87,7 @@ export interface CommandGroup {
   label: string
   icon: string
   order: number
+  custom?: boolean
 }
 
 export interface CommandsConfig {
@@ -207,6 +208,10 @@ export const IPC_CHANNELS = {
   COMMANDS_SAVE: 'commands:save',
   COMMANDS_DELETE: 'commands:delete',
   COMMANDS_UPDATE: 'commands:update',
+  COMMANDS_GROUP_CREATE: 'commands:group:create',
+  COMMANDS_GROUP_UPDATE: 'commands:group:update',
+  COMMANDS_GROUP_DELETE: 'commands:group:delete',
+  LOG_EXPORT: 'log:export',
   FAVORITES_LOAD: 'favorites:load',
   FAVORITES_SAVE: 'favorites:save',
   // Phase 7 N3：常用设备路径
@@ -237,6 +242,10 @@ export interface ElectronAPI {
   addCommand: (command: CommandDef) => Promise<{ success: boolean; error?: string; config?: CommandsConfig }>
   deleteCommand: (id: string) => Promise<{ success: boolean; error?: string; config?: CommandsConfig }>
   updateCommand: (command: CommandDef) => Promise<{ success: boolean; error?: string; config?: CommandsConfig }>
+  createCommandGroup: (group: Pick<CommandGroup, 'id' | 'label' | 'icon'>) => Promise<{ success: boolean; error?: string; config?: CommandsConfig }>
+  updateCommandGroup: (group: CommandGroup) => Promise<{ success: boolean; error?: string; config?: CommandsConfig }>
+  deleteCommandGroup: (id: string) => Promise<{ success: boolean; error?: string; config?: CommandsConfig; deletedCommandCount?: number }>
+  exportLog: (text: string) => Promise<{ canceled: boolean; path?: string; error?: string }>
   loadFavorites: () => Promise<FavoriteEntry[]>
   saveFavorites: (entries: FavoriteEntry[]) => Promise<void>
   // Phase 7 N3：常用设备路径

@@ -6,6 +6,7 @@
 import fs from 'fs'
 import path from 'path'
 import { CommandsConfig, CommandDef, CommandGroup } from '../src/types'
+import { createCustomGroup, deleteCustomGroup } from '../src/utils/commandConfigUtils'
 
 const CONFIG_FILENAME = 'commands.json'
 
@@ -282,6 +283,32 @@ export class ConfigLoader {
 
     console.log(`[ConfigLoader] 已更新自定义命令: ${updated.label} (${updated.id})`)
     return config
+  }
+
+  createGroup(input: Pick<CommandGroup, 'id' | 'label' | 'icon'>): CommandsConfig {
+    const config = this.getConfig()
+    config.groups.push(createCustomGroup(input, config.groups))
+    this.saveConfig()
+    return config
+  }
+
+  updateGroup(updated: CommandGroup): CommandsConfig {
+    const config = this.getConfig()
+    const index = config.groups.findIndex(group => group.id === updated.id)
+    if (index < 0) throw new Error(`分组 "${updated.id}" 不存在`)
+    if (!config.groups[index].custom) throw new Error('内置分组不能编辑')
+    config.groups[index] = { ...config.groups[index], label: updated.label.trim(), icon: updated.icon || 'Folder' }
+    this.saveConfig()
+    return config
+  }
+
+  deleteGroup(id: string): { config: CommandsConfig; deletedCommandCount: number } {
+    const config = this.getConfig()
+    const deletedCommandCount = config.commands.filter(command => command.groupId === id && command.custom).length
+    const next = deleteCustomGroup(config, id)
+    this.config = next
+    this.saveConfig()
+    return { config: next, deletedCommandCount }
   }
 
   /** 提取 template 字符串中的 {key} 占位符 */

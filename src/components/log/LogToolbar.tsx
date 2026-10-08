@@ -1,8 +1,9 @@
-import { ArrowDownToLine, ArrowUpToLine, ChevronDown, ChevronUp, Copy, Trash2, Square, Maximize2 } from 'lucide-react'
+import { ArrowDownToLine, ArrowUpToLine, ChevronDown, ChevronUp, Copy, Trash2, Square, Maximize2, Download } from 'lucide-react'
 import { useCommandStore } from '../../store/commandStore'
 import { useLogStore } from '../../store/logStore'
 import { LogLevel } from '../../types'
 import { getVisibleLineIds, stripAnsi } from '../../utils/logUtils'
+import { buildLogExportText } from '../../utils/commandConfigUtils'
 import LogLevelFilter from './LogLevelFilter'
 
 interface Props {
@@ -27,6 +28,18 @@ export default function LogToolbar({ isFloating = false }: Props) {
   const setLevelFilter = useLogStore(s => s.setLevelFilter)
   const setStreamFilter = useLogStore(s => s.setStreamFilter)
   const setIsFloating = useLogStore(s => s.setIsFloating)
+
+  const handleExport = async () => {
+    const text = buildLogExportText(
+      useLogStore.getState().segmentOrder,
+      segmentOrderDisplay,
+      segments,
+      lines,
+    )
+    const result = await window.electronAPI.exportLog(text)
+    if (result.error) window.alert(`导出日志失败：${result.error}`)
+    else if (!result.canceled && result.path) window.alert(`日志已保存到：${result.path}`)
+  }
 
   const runningCmdIds = Array.from(executionStates.values())
     .filter(state => state.status === 'running')
@@ -104,6 +117,9 @@ export default function LogToolbar({ isFloating = false }: Props) {
       </button>
       <button className="btn-ghost p-1 rounded" title="复制可见日志" onClick={handleCopyVisible}>
         <Copy size={14} />
+      </button>
+      <button className="btn-ghost p-1 rounded disabled:opacity-40" title="导出全部日志" onClick={handleExport} disabled={segments.size === 0}>
+        <Download size={14} />
       </button>
       {!isFloating && (
         <button

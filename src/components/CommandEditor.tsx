@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react'
+import { useState, useEffect } from 'react'
 import { useCommandStore } from '../store/commandStore'
 import { CommandDef, CommandParam, OutputMode, ParamType } from '../types'
 import { X, Plus, Trash2 } from 'lucide-react'
@@ -204,7 +204,7 @@ export default function CommandEditor() {
         {/* 表单区域（可滚动） */}
         <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4">
           {/* 基本信息 */}
-          <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-xs text-text-secondary mb-1">命令 ID *</label>
               <input
@@ -228,11 +228,13 @@ export default function CommandEditor() {
                 className="input-field w-full text-sm"
                 value={groupId}
                 onChange={e => setGroupId(e.target.value)}
+                disabled={!!editingCommand && !editingCommand.custom}
               >
                 {groups.map(g => (
                   <option key={g.id} value={g.id}>{g.label}</option>
                 ))}
               </select>
+              {!!editingCommand && !editingCommand.custom && <p className="text-xs text-slate-500 mt-1">内置命令不能调整分组</p>}
             </div>
           </div>
 

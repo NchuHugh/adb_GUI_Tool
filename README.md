@@ -8,6 +8,7 @@
   <img src="https://img.shields.io/badge/electron-30.x-9feaf9" alt="Electron">
   <img src="https://img.shields.io/badge/react-18.x-61dafb" alt="React">
   <img src="https://img.shields.io/badge/typescript-5.x-3178c6" alt="TypeScript">
+  <img src="https://img.shields.io/badge/version-1.1.3-2ea44f" alt="Version">
   <img src="https://img.shields.io/badge/license-MIT-green" alt="License">
 </p>
 
@@ -16,6 +17,8 @@
 ## 项目简介
 
 **ADB GUI** 是一款运行于 Windows 10/11 x64 的桌面工具，通过图形界面封装常用的 `adb` 命令，让 Android 开发者无需记忆命令行语法即可完成设备管理、文件操作、应用调试、日志抓取、系统属性修改、网络调试等高频操作。
+
+当前版本：**1.1.3**
 
 <p align="center">
   <em>点击命令卡片 → 填写参数 → 实时查看输出。零命令行。</em>

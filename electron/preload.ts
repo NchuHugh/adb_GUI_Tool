@@ -77,6 +77,10 @@ const electronAPI = {
 
   // F1: 编辑用户自定义命令
   updateCommand: (command: any) => ipcRenderer.invoke(IPC_CHANNELS.COMMANDS_UPDATE, command),
+  createCommandGroup: (group: any) => ipcRenderer.invoke(IPC_CHANNELS.COMMANDS_GROUP_CREATE, group),
+  updateCommandGroup: (group: any) => ipcRenderer.invoke(IPC_CHANNELS.COMMANDS_GROUP_UPDATE, group),
+  deleteCommandGroup: (id: string) => ipcRenderer.invoke(IPC_CHANNELS.COMMANDS_GROUP_DELETE, id),
+  exportLog: (text: string) => ipcRenderer.invoke(IPC_CHANNELS.LOG_EXPORT, text),
 
   // F3: 收藏功能
   loadFavorites: () => ipcRenderer.invoke(IPC_CHANNELS.FAVORITES_LOAD),

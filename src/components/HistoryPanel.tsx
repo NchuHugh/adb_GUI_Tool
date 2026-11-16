@@ -27,7 +27,7 @@ export default function HistoryPanel() {
 
   const handleReExecute = (entry: typeof history[0]) => {
     const cmd = useCommandStore.getState().commands.find(c => c.id === entry.commandId)
-    if (!cmd) {
+    if (!cmd || cmd.invalid) {
       // 命令已从配置中删除，无法重新执行
       alert('命令已不存在于配置中')
       return
@@ -38,12 +38,13 @@ export default function HistoryPanel() {
     if (cmd.params.length === 0) {
       // 无参数命令：直接执行
       const cmdId = crypto.randomUUID()
+      const { resolvedArgs } = entry
       const request = {
         cmdId,
         commandId: entry.commandId,
-        resolvedArgs: entry.resolvedArgs,
+        resolvedArgs,
       }
-      useCommandStore.getState().recordPendingMeta(cmdId, entry.commandId, entry.resolvedArgs, entry.commandLabel)
+      useCommandStore.getState().recordPendingMeta(cmdId, entry.commandId, resolvedArgs, entry.commandLabel)
       useCommandStore.getState().updateExecutionState(cmdId, {
         cmdId,
         commandId: entry.commandId,

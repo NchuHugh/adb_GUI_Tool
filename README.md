@@ -1,86 +1,60 @@
-<p align="center">
-  <h1 align="center">ADB GUI</h1>
-  <p align="center">面向 Android 专业开发人员的桌面 ADB 命令封装工具</p>
-</p>
+<h1 align="center">ADB GUI</h1>
+
+<p align="center">面向 Android 开发和测试人员的桌面 ADB / Fastboot 工具</p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/platform-Windows%2010%2F11-blue" alt="Platform">
-  <img src="https://img.shields.io/badge/electron-30.x-9feaf9" alt="Electron">
-  <img src="https://img.shields.io/badge/react-18.x-61dafb" alt="React">
-  <img src="https://img.shields.io/badge/typescript-5.x-3178c6" alt="TypeScript">
-  <img src="https://img.shields.io/badge/version-1.1.3-2ea44f" alt="Version">
-  <img src="https://img.shields.io/badge/license-MIT-green" alt="License">
+  <img src="https://img.shields.io/badge/platform-Windows%2010%2F11-blue" alt="Windows 10/11">
+  <img src="https://img.shields.io/badge/electron-30.x-9feaf9" alt="Electron 30.x">
+  <img src="https://img.shields.io/badge/react-18.x-61dafb" alt="React 18.x">
+  <img src="https://img.shields.io/badge/typescript-5.x-3178c8" alt="TypeScript 5.x">
+  <img src="https://img.shields.io/badge/version-2.0.0-2ea44f" alt="版本 2.0.0">
+  <img src="https://img.shields.io/badge/tools-ADB%20%2F%20Fastboot-64748b" alt="ADB / Fastboot">
 </p>
 
 ---
 
 ## 项目简介
 
-**ADB GUI** 是一款运行于 Windows 10/11 x64 的桌面工具，通过图形界面封装常用的 `adb` 命令，让 Android 开发者无需记忆命令行语法即可完成设备管理、文件操作、应用调试、日志抓取、系统属性修改、网络调试等高频操作。
+**ADB GUI** 是一款运行于 Windows 10/11 x64 的桌面工具。它把常用 adb 命令放进可搜索的命令卡片，并提供设备文件管理和独立日志控制台。通过图形界面封装常用的adb命令，让 Android 开发者无需记忆命令行语法即可完成设备管理、文件操作、应用调试、日志抓取、系统属性修改、网络调试等高频操作。
 
-当前版本：**1.1.3**
+当前版本 **2.0.0**  
 
 <p align="center">
-  <em>点击命令卡片 → 填写参数 → 实时查看输出。零命令行。</em>
+  <em>点击命令卡片 → 填写参数 → 实时查看输出。</em>
 </p>
-
-### 核心特性
-
-| 特性 | 说明 |
-|------|------|
-| 🖱️ **图形化命令执行** | 50+ 内置 adb 命令，分组展示，一键执行 |
-| 📝 **参数填写弹窗** | 支持 text / file / directory / select 四种参数类型，实时命令预览 |
-| 🔗 **一键填入联动** | 将一条命令的输出直接填入另一条命令的参数，消除复制粘贴 |
-| 📺 **日志控制台** | React DOM 日志渲染，支持分段折叠、搜索高亮、级别过滤与虚拟滚动 |
-| 📋 **历史记录** | 最近 50 条执行记录持久化，一键重新执行 |
-| 🛑 **命令中止** | 运行中命令可随时中止，超时自动终止 |
-| 🔧 **JSON 驱动** | 命令清单由 `commands.json` 配置文件驱动，不改代码即可新增命令 |
-| ✏️ **自定义命令编辑器** | 应用内新增/编辑/删除自定义命令，即时生效并持久化 |
-| ⭐ **收藏命令** | 收藏常用命令（含参数）为预设快捷方式，侧边栏一键执行 |
-| 📦 **独立分发** | 单文件 Portable 版 + NSIS 安装包，无需额外安装运行时 |
-
----
-
-## 运行环境与依赖
-
-### 系统要求
-
-| 项目 | 要求 |
-|------|------|
-| 操作系统 | Windows 10 / 11 x64 |
-| Node.js | 18+ (LTS) |
-| Android SDK | Platform Tools（`adb` 须在系统 PATH 中） |
-
-### 技术栈
-
-```
-桌面框架     Electron 30.x
-前端         React 18 + TypeScript 5.x
-构建工具     Vite 5 + vite-plugin-electron
-样式         Tailwind CSS 3
-状态管理     Zustand 4
-日志渲染     React DOM 自定义渲染器
-图标         lucide-react
-打包         electron-builder (NSIS + Portable)
-```
-
-### 前置条件
-
-在终端中验证 `adb` 可用：
-
-```bash
-adb version
-# Android Debug Bridge version 1.0.41
-# Version 34.0.4-...
-```
-
-如果提示 `command not found`，请[下载 Android SDK Platform Tools](https://developer.android.com/studio/releases/platform-tools) 并将解压目录添加到系统 `PATH` 环境变量。
-
----
 
 ## 快速开始
 
-```bash
+1. 准备 Windows 10 或 11 x64，将 Android SDK Platform Tools 目录加入系统 `PATH`。在终端运行 `adb version` 和 `fastboot --version` 确认可用。[下载 Android SDK Platform Tools](https://developer.android.com/studio/releases/platform-tools)
+2. 在 Android 设备上开启 USB 调试，连接电脑并允许调试。多台设备连接时，在应用顶部选定 ADB 目标。
+3. 使用已构建的 Windows 安装包启动应用，或按下文的开发步骤从源码启动。
+
+## 执行命令
+
+- 在「全部命令」中搜索命令，或点击其右侧箭头展开分组。
+- 点击命令卡片执行。带参数的命令会先打开填写窗口，支持文件、目录、文本和下拉选项。带「一键填入」的字段可从推荐命令、近期命令输出或常用设备路径选取值。
+- 使用「新增命令」和「管理分组」保存自己的配置。常用参数可另存为命令，也可收藏。历史记录保留最近 50 次执行，带参数的历史命令可预填后再执行。
+- 需要执行多行脚本时，可用「执行 Shell 命令」卡片填写脚本或粘贴完整的 `adb shell "…"`。
+- 用户配置、收藏、历史和自定义设备路径保存在 `%APPDATA%\adb-gui\`。如需维护命令清单，可使用应用内编辑器，或编辑内置 `config/commands.json`。已有用户命令配置会优先加载。
+
+## 设备 Shell
+
+点击侧栏的「设备 Shell」，应用会读取当前选中设备的 Shell 目录。双击目录、使用「上一级」或在地址栏输入绝对路径都可导航。文件列表区可上传文件、下载文件或目录、新建目录、重命名，以及删除文件、链接和空目录。
+
+底部命令栏在当前目录执行命令。例如输入 `cd /data/local/tmp && pwd`，文件列表会随目录切换。操作记录显示进行中、成功、失败与取消，Shell 命令还会显示输出和退出码。拖动记录区上方的分隔条可调高度，向上滚动可查看之前的记录。
+
+## 日志控制台
+
+- 实时日志按命令分段，可折叠、排序、再执行一次，复制、删除和导出。
+- 工具栏的「独立控制台」可将日志移到单独窗口，关闭后回到主窗口。把应用导出的 `.log` 拖入主窗口或独立控制台，也可用「打开日志文件」选择归档。
+- 搜索支持大小写与正则表达式，筛选支持级别、stdout/stderr、普通文本及 Logcat 字段。
+- 归档与实时日志可切换。旧版文本归档支持按命令分段，新版格式还保留输出流、时间和退出状态。归档中的命令用于回看。
+
+## 开发与构建
+
+从源码开发需安装 Node.js 18 或更高版本。
+
+```powershell
 # 1. 克隆仓库
 git clone <repo-url>
 cd adbTool
@@ -101,138 +75,5 @@ npm run build
 npm run package
 ```
 
----
+`npm run build` 生成 `dist-electron/`。需要 Windows x64 NSIS 安装包时，运行 `npm run package:win`，安装包输出到 `release/`。
 
-## 项目结构
-
-```
-adbTool/
-├── electron/                    # Electron 主进程
-│   ├── main.ts                  # 窗口创建、IPC 注册、生命周期管理
-│   ├── preload.ts               # contextBridge 安全 API
-│   ├── adbRunner.ts             # child_process.spawn 执行 adb 命令
-│   ├── configLoader.ts          # 读取并校验 commands.json
-│   └── devicePoller.ts          # 每 2 秒轮询 adb devices -l
-├── src/                         # 渲染进程 (React)
-│   ├── App.tsx                  # 根布局 + 全局 IPC 监听
-│   ├── main.tsx                 # ReactDOM 入口
-│   ├── index.css                # Tailwind + 暗色主题样式
-│   ├── components/
-│   │   ├── DeviceStatusBar.tsx  # 设备连接状态栏
-│   │   ├── Sidebar.tsx          # 分组导航 + 收藏/历史入口
-│   │   ├── CommandList.tsx      # 搜索 + 命令卡片网格
-│   │   ├── CommandCard.tsx      # 单个命令卡片（含收藏、编辑、删除）
-│   │   ├── CommandEditor.tsx    # 自定义命令编辑器（新增/编辑）
-│   │   ├── ParamDialog.tsx      # 参数填写弹窗
-│   │   ├── ParamField.tsx       # 参数输入控件 (4 种类型)
-│   │   ├── LogPanel.tsx         # 日志控制台容器（工具栏、搜索、虚拟列表）
-│   │   ├── HistoryPanel.tsx     # 历史记录抽屉
-│   │   ├── FavoritesPanel.tsx   # 收藏命令抽屉
-│   │   ├── FillPicker.tsx       # 一键填入选择器
-│   │   └── AdbMissingModal.tsx  # adb 未找到提示
-│   ├── store/
-│   │   ├── commandStore.ts      # 命令列表、分组、搜索、弹窗状态
-│   │   ├── deviceStore.ts       # 设备列表、选中设备、adb 可用性
-│   │   ├── logStore.ts          # 历史记录、日志缓存、自动滚动
-│   │   └── favoriteStore.ts     # 收藏命令状态管理
-│   ├── types/
-│   │   └── index.ts             # 全部共享类型 + IPC 通道常量
-│   └── utils/
-│       ├── outputProcessor.ts   # 命令输出预处理规则
-│       └── commandEditorUtils.ts # 命令编辑器公共工具函数
-├── config/
-│   └── commands.json            # 命令配置文件（50+ 命令, 7 个分组）
-├── electron-builder.config.js   # 打包配置
-├── package.json
-├── vite.config.ts
-├── tsconfig.json
-├── tsconfig.node.json
-├── tailwind.config.js
-└── README.md
-```
-
----
-
-## 使用指南
-
-### 执行命令
-
-1. 左侧分组导航选择命令分类，或使用搜索框查找
-2. **无参数命令**（绿色"直接执行"标记）：点击卡片立即执行
-3. **有参数命令**（蓝色"N 个参数"标记）：点击打开参数弹窗，填写后点击"执行"
-4. 实时输出显示在底部终端面板
-
-### 一键填入
-
-1. 在 ParamDialog 中，`fillable` 参数字段旁点击 **「一键填入 ▼」**
-2. 选择数据来源（推荐命令 / 历史记录 / 执行新命令）
-3. 从输出行中点击选择目标值
-4. 值自动填入当前参数输入框
-
-### 历史记录
-
-- 点击侧边栏底部 **「历史记录」** 打开右侧抽屉
-- 每条记录显示命令、时间、耗时、退出码
-- 点击 **🔄 重新执行** 按钮直接重跑
-
-### 多设备
-
-- 连接多台设备时，顶部状态栏自动出现下拉选择器
-- 选中的设备序列号自动注入到所有命令（`adb -s <serial> ...`）
-
-### 自定义命令
-
-- 侧边栏底部 **「+ 新增命令」** 打开编辑器，表单填写后保存，即时生效
-- 自定义命令卡片底部显示 **「自定义」** 标签，支持 **✏ 编辑** 和 **🗑 删除**
-- 在 ParamDialog 填写参数后可 **「📑 另存为命令」** 将当前参数预设为新命令的默认值
-
-### 收藏命令
-
-- 命令卡片右上角 **★ 星标** 收藏常用命令
-- 无参数命令点击星标直接收藏；有参数命令需填写参数后保存
-- 侧边栏底部 **「收藏命令」** 打开收藏面板，支持重命名、一键执行、删除
-
----
-
-## 扩展命令
-
-**方式一：应用内编辑器**（推荐）
-
-侧边栏「新增命令」→ 填写表单 → 保存，命令即时生效并持久化到 `%APPDATA%\adb-gui\commands.json`。
-
-**方式二：直接编辑配置文件**
-
-在 `config/commands.json` 中追加即可，无需改动任何代码：
-
-```json
-{
-  "id": "adb_shell_custom",
-  "groupId": "shell",
-  "label": "自定义 Shell",
-  "description": "在设备上执行自定义 Shell 命令",
-  "template": "adb shell {cmd}",
-  "params": [
-    { "key": "cmd", "label": "Shell 命令", "type": "text", "required": true, "default": "" }
-  ],
-  "outputMode": "stream",
-  "timeout": 30000
-}
-```
-
-也支持用户级覆盖：将修改后的 `commands.json` 放入 `%APPDATA%\adb-gui\`，应用会优先读取。
-
----
-
-## 打包与分发
-
-```bash
-npm run package        # 构建 + 打包 (NSIS + Portable)
-npm run package:win    # 仅 Windows 目标
-```
-
-
----
-
-## License
-
-MIT

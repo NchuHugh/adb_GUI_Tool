@@ -1,3 +1,4 @@
+import { initializeTheme } from './theme'
 import React from 'react'
 import ReactDOM from 'react-dom/client'
 import App from './App'
@@ -5,6 +6,8 @@ import './index.css'
 import packageJson from '../package.json'
 
 document.title = `ADB GUI v${packageJson.version}`
+
+initializeTheme()
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>

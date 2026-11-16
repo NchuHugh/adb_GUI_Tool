@@ -1,10 +1,9 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useState } from 'react'
 import DeviceStatusBar from './components/DeviceStatusBar'
 import Sidebar from './components/Sidebar'
 import CommandList from './components/CommandList'
-import LogPanel from './components/LogPanel'
-import LogResizeHandle from './components/log/LogResizeHandle'
-import LogFloatOverlay from './components/log/LogFloatOverlay'
+import DeviceShell from './components/DeviceShell'
+import ConsoleWorkspace from './components/ConsoleWorkspace'
 import AdbMissingModal from './components/AdbMissingModal'
 import HistoryPanel from './components/HistoryPanel'
 import ParamDialog from './components/ParamDialog'
@@ -16,10 +15,16 @@ import { useDeviceStore } from './store/deviceStore'
 import { useLogStore } from './store/logStore'
 import { useFavoriteStore } from './store/favoriteStore'
 import { useDevicePathStore } from './store/devicePathStore'
-import { HistoryEntry, ExecutionState } from './types'
-import { LogContentHandle } from './components/log/LogContent'
+import { HistoryEntry, ExecutionState, LogLine } from './types'
+import { formatCommand, getCommandTool } from './utils/argParser'
+
+const HISTORY_OUTPUT_LIMIT = 65_536
+const FILL_OUTPUT_LIMIT = 262_144
+const LOG_BATCH_INTERVAL_MS = 75
 
 export default function App() {
+  const [view, setView] = useState<'commands' | 'shell'>('commands')
+  const [shellVisited, setShellVisited] = useState(false)
   const setConfig = useCommandStore(s => s.setConfig)
   const setDevices = useDeviceStore(s => s.setDevices)
   const setAdbAvailability = useDeviceStore(s => s.setAdbAvailability)
@@ -30,20 +35,23 @@ export default function App() {
   const appendLines = useLogStore(s => s.appendLines)
   const closeSegment = useLogStore(s => s.closeSegment)
   const clearLog = useLogStore(s => s.clearLog)
-  const isLogFloating = useLogStore(s => s.isFloating)
-  const logPanelHeight = useLogStore(s => s.logPanelHeight)
-  const resizeLogPanel = useLogStore(s => s.resizeLogPanel)
   const consumePendingMeta = useCommandStore(s => s.consumePendingMeta)
   const updateExecutionState = useCommandStore(s => s.updateExecutionState)
-  const executionStates = useCommandStore(s => s.executionStates)
-
-  // 用 ref 累积命令输出（避免渲染重绘）
-  const outputBuffers = useRef<Map<string, string>>(new Map())
-
-  // Phase 7 N2: 暴露给日志面板的滚动控制句柄（用于新段打开后主动滚动）
-  const logContentRef = useRef<LogContentHandle>(null)
 
   useEffect(() => {
+    const outputBuffers = new Map<string, { text: string; truncated: boolean }>()
+    let pending: Array<Omit<LogLine, 'id' | 'level'>> = []
+    let timer: ReturnType<typeof setTimeout> | undefined
+    const flush = () => {
+      clearTimeout(timer)
+      timer = undefined
+      const batch = pending
+      pending = []
+      appendLines(batch)
+    }
+    const getCommand = (id: string | undefined) =>
+      useCommandStore.getState().commands.find(command => command.id === id)
+
     // 加载命令配置
     window.electronAPI.getCommands().then(config => {
       setConfig(config)
@@ -73,42 +81,40 @@ export default function App() {
 
     // 监听命令输出（累积完整输出文本）
     const unsubOutput = window.electronAPI.onAdbOutput((chunk) => {
-      const text = chunk.lines.join('\n')
-      const buf = outputBuffers.current
-      const existing = buf.get(chunk.cmdId) || ''
-      buf.set(chunk.cmdId, existing + (existing && text ? '\n' : '') + text)
-
       const meta = useCommandStore.getState().pendingCommandMetas.get(chunk.cmdId)
-      const resolvedCommand = meta ? ['adb', ...meta.resolvedArgs].join(' ') : ''
+      const command = getCommand(meta?.commandId)
+      const tool = getCommandTool(command?.template ?? '')
+      const resolvedCommand = meta ? formatCommand(tool, meta.resolvedArgs) : ''
+      const buffer = outputBuffers.get(chunk.cmdId) ?? { text: '', truncated: false }
+      const limit = command?.fillable === true ? FILL_OUTPUT_LIMIT : HISTORY_OUTPUT_LIMIT
+      if (!buffer.truncated) {
+        const text = (buffer.text ? '\n' : '') + chunk.lines.join('\n')
+        const remaining = limit - buffer.text.length
+        buffer.text += text.slice(0, remaining)
+        buffer.truncated = text.length > remaining
+        outputBuffers.set(chunk.cmdId, buffer)
+      }
       const segmentExists = useLogStore.getState().segments.has(chunk.cmdId)
       if (!segmentExists) {
         openSegment(chunk.cmdId, {
           commandLabel: meta?.commandLabel ?? chunk.cmdId.slice(0, 8),
           resolvedCommand,
+          execution: meta && { commandId: meta.commandId, resolvedArgs: meta.resolvedArgs, tool },
           startedAt: Date.now(),
         })
-        // Phase 7 N2: 逆序模式下新段插入到顶部，主动滚动到顶部
-        if (useLogStore.getState().segmentOrderDisplay === 'desc' && useLogStore.getState().autoScroll) {
-          // 延迟到下一帧，确保 DOM 已更新
-          requestAnimationFrame(() => logContentRef.current?.scrollToTop())
-        }
       }
 
       const now = Date.now()
-      appendLines(
-        chunk.lines
-          .filter(raw => raw !== '')
-          .map(raw => ({
-            cmdId: chunk.cmdId,
-            stream: chunk.stream,
-            raw,
-            timestamp: now,
-          })),
-      )
+      for (const raw of chunk.lines) {
+        if (raw) pending.push({ cmdId: chunk.cmdId, stream: chunk.stream, raw, timestamp: now })
+      }
+      if (pending.length >= 8_192) flush()
+      else if (!timer) timer = setTimeout(flush, LOG_BATCH_INTERVAL_MS)
     })
 
     // 监听命令完成（构造 HistoryEntry + 更新执行状态）
     const unsubDone = window.electronAPI.onAdbDone((event) => {
+      flush()
       // Bug 3 fix: 更新执行状态（停止转圈）
       // Bug 2 fix: 流式命令被用户中止不应标记为 'failed'
       const currentState = useCommandStore.getState().executionStates.get(event.cmdId)
@@ -133,8 +139,11 @@ export default function App() {
 
       // 从 store 取出执行前记录的元信息（由 CommandCard/ParamDialog 在执行前写入）
       const meta = consumePendingMeta(event.cmdId)
-      const output = outputBuffers.current.get(event.cmdId) || ''
-      const resolvedCommand = meta ? ['adb', ...meta.resolvedArgs].join(' ') : ''
+      const buffer = outputBuffers.get(event.cmdId)
+      const output = buffer?.text ?? ''
+      const command = getCommand(meta?.commandId)
+      const tool = getCommandTool(command?.template ?? '')
+      const resolvedCommand = meta ? formatCommand(tool, meta.resolvedArgs) : ''
 
       if (meta?.commandId === 'adb_logcat_clear' && event.exitCode === 0) {
         clearLog()
@@ -144,20 +153,16 @@ export default function App() {
         openSegment(event.cmdId, {
           commandLabel: meta?.commandLabel ?? event.cmdId.slice(0, 8),
           resolvedCommand,
+          execution: meta && { commandId: meta.commandId, resolvedArgs: meta.resolvedArgs, tool },
           startedAt: Date.now() - event.durationMs,
         })
-        // Phase 7 N2: 逆序模式下新段插入到顶部，主动滚动到顶部
-        if (useLogStore.getState().segmentOrderDisplay === 'desc' && useLogStore.getState().autoScroll) {
-          requestAnimationFrame(() => logContentRef.current?.scrollToTop())
-        }
       }
       closeSegment(event.cmdId, event.exitCode, event.reason)
 
       // 缓存输出（F4 FillPicker 用）
       // Phase 7 N4: 仅对 fillable !== false 的命令写入 outputCache；
       // 且对 fillable 未定义的未知命令，输出超过 5 行时不写入
-      if (meta && output.trim()) {
-        const command = useCommandStore.getState().commands.find(c => c.id === meta.commandId)
+      if (meta && !buffer?.truncated && output.trim()) {
         if (command && command.fillable !== false) {
           if (command.fillable === true) {
             setOutputCache(meta.commandId, output)
@@ -171,27 +176,29 @@ export default function App() {
       }
 
       if (meta) {
-        const command = useCommandStore.getState().commands.find(c => c.id === meta.commandId)
         const entry: HistoryEntry = {
           id: event.cmdId,
           commandId: meta.commandId,
           commandLabel: meta.commandLabel,
-          resolvedCommand: ['adb', ...meta.resolvedArgs].join(' '),
+          resolvedCommand,
           resolvedArgs: meta.resolvedArgs,
           exitCode: event.exitCode,
           durationMs: event.durationMs,
           executedAt: new Date().toISOString(),
           hasParams: (command?.params.length ?? 0) > 0,
-          outputText: output,
+          outputText: buffer?.truncated || output.length > HISTORY_OUTPUT_LIMIT
+            ? output.slice(0, HISTORY_OUTPUT_LIMIT) + '\n[历史输出已截断]'
+            : output,
         }
         addEntry(entry)
       }
 
       // 清理 buffer
-      outputBuffers.current.delete(event.cmdId)
+      outputBuffers.delete(event.cmdId)
     })
 
     return () => {
+      clearTimeout(timer)
       unsubDevices()
       unsubAdb()
       unsubOutput()
@@ -207,25 +214,26 @@ export default function App() {
       {/* 主体区域：侧边栏 + 命令区 + 日志面板 */}
       <div className="flex flex-1 overflow-hidden">
         {/* 侧边栏 */}
-        <Sidebar />
+        <Sidebar shellOpen={view === 'shell'} onNavigate={nextView => {
+          if (nextView === 'shell') setShellVisited(true)
+          setView(nextView)
+        }} />
 
         {/* 命令区 + 日志面板（垂直分割）*/}
         <div className="flex flex-col flex-1 overflow-hidden">
           <div className="flex-1 overflow-hidden min-h-0">
-            <CommandList />
-          </div>
-          {!isLogFloating && (
-            <>
-              <LogResizeHandle onResize={resizeLogPanel} />
-              <div style={{ height: logPanelHeight, flexShrink: 0 }} className="min-h-0">
-                <LogPanel ref={logContentRef} />
+            {view === 'commands' && <CommandList />}
+            {shellVisited && (
+              <div hidden={view !== 'shell'} className="h-full">
+                <DeviceShell visible={view === 'shell'} />
               </div>
-            </>
-          )}
+            )}
+          </div>
+          <div className={view === 'shell' ? 'hidden' : 'shrink-0'}>
+            <ConsoleWorkspace />
+          </div>
         </div>
       </div>
-
-      {isLogFloating && <LogFloatOverlay ref={logContentRef} />}
 
       {/* F1: adb 未找到模态框 */}
       <AdbMissingModal />

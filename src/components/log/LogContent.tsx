@@ -1,179 +1,121 @@
-import { forwardRef, useCallback, useDeferredValue, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react'
-import { useLogStore } from '../../store/logStore'
-import { buildRenderItems, getVisibleLineIds } from '../../utils/logUtils'
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { usePanelLogStore } from '../LogPanelStore'
+import { buildSearchRegex, getVisibleLineIds } from '../../utils/logUtils'
 import LogLine from './LogLine'
 import LogSegmentHeader from './LogSegmentHeader'
 
 const HEADER_HEIGHT = 40
-const LINE_HEIGHT = 22
-const OVERSCAN = 20
+const OVERSCAN_PX = 440
 
-function throttle<T extends (...args: never[]) => void>(fn: T, ms: number): T {
-  let last = 0
-  return ((...args: Parameters<T>) => {
-    const now = Date.now()
-    if (now - last >= ms) {
-      last = now
-      fn(...args)
-    }
-  }) as T
-}
-
-export interface LogContentHandle {
-  scrollToTop: () => void
-  scrollToBottom: () => void
-}
-
-const LogContent = forwardRef<LogContentHandle>(function LogContent(_props, ref) {
+export default function LogContent({ fontSize, archive }: { fontSize: number; archive?: boolean }) {
+  const lineHeight = fontSize + 10
   const parentRef = useRef<HTMLDivElement>(null)
   const [scrollTop, setScrollTop] = useState(0)
   const [viewportHeight, setViewportHeight] = useState(240)
+  const lines = usePanelLogStore(s => s.lines)
+  const segments = usePanelLogStore(s => s.segments)
+  const segmentOrder = usePanelLogStore(s => s.segmentOrder)
+  const segmentOrderDisplay = usePanelLogStore(s => s.segmentOrderDisplay)
+  const levelFilter = usePanelLogStore(s => s.levelFilter)
+  const streamFilter = usePanelLogStore(s => s.streamFilter)
+  const fieldFilter = usePanelLogStore(s => s.fieldFilter)
+  const autoScroll = usePanelLogStore(s => s.autoScroll)
+  const searchQuery = usePanelLogStore(s => s.searchQuery)
+  const searchOptions = usePanelLogStore(s => s.searchOptions)
+  const matchedLineIds = usePanelLogStore(s => s.matchedLineIds)
+  const activeMatchIndex = usePanelLogStore(s => s.activeMatchIndex)
+  const scrollTargetLineId = usePanelLogStore(s => s.scrollTargetLineId)
+  const toggleSegment = usePanelLogStore(s => s.toggleSegment)
+  const consumeScrollTarget = usePanelLogStore(s => s.consumeScrollTarget)
 
-  const lines = useLogStore(s => s.lines)
-  const lineOrder = useLogStore(s => s.lineOrder)
-  const segments = useLogStore(s => s.segments)
-  const segmentOrder = useLogStore(s => s.segmentOrder)
-  const segmentOrderDisplay = useLogStore(s => s.segmentOrderDisplay)
-  const levelFilter = useLogStore(s => s.levelFilter)
-  const streamFilter = useLogStore(s => s.streamFilter)
-  const autoScroll = useLogStore(s => s.autoScroll)
-  const searchQuery = useLogStore(s => s.searchQuery)
-  const searchOptions = useLogStore(s => s.searchOptions)
-  const matchedLineIds = useLogStore(s => s.matchedLineIds)
-  const activeMatchIndex = useLogStore(s => s.activeMatchIndex)
-  const scrollTargetLineId = useLogStore(s => s.scrollTargetLineId)
-  const toggleSegment = useLogStore(s => s.toggleSegment)
-  const consumeScrollTarget = useLogStore(s => s.consumeScrollTarget)
-
-  const deferredLineOrder = useDeferredValue(lineOrder)
-
-  const renderItems = useMemo(() => {
-    const visibleLineIds = getVisibleLineIds({
-      lineOrder: deferredLineOrder,
-      lines,
-      segments,
-      levelFilter,
-      streamFilter,
+  const layout = useMemo(() => {
+    const filtered = levelFilter.size > 0 || streamFilter !== 'all' || fieldFilter.trim() !== ''
+    const ordered = segmentOrderDisplay === 'desc' ? [...segmentOrder].reverse() : segmentOrder
+    let height = 0
+    const blocks = ordered.flatMap(cmdId => {
+      const segment = segments.get(cmdId)
+      if (!segment) return []
+      const lineIds = segment.isCollapsed ? [] : filtered
+        ? getVisibleLineIds({ lineOrder: segment.lineIds, lines, segments, levelFilter, streamFilter, fieldFilter })
+        : segment.lineIds
+      const top = height
+      height += HEADER_HEIGHT + lineIds.length * lineHeight
+      return [{ segment, lineIds, top, end: height }]
     })
-    return buildRenderItems({
-      segmentOrder,
-      segments,
-      visibleLineIds,
-      segmentOrderDisplay,
-    })
-  }, [deferredLineOrder, lines, segments, segmentOrder, segmentOrderDisplay, levelFilter, streamFilter])
-
-  const offsets = useMemo(() => {
-    const result: number[] = []
-    let total = 0
-    for (const item of renderItems) {
-      result.push(total)
-      if (item.type === 'segment-header') {
-        total += HEADER_HEIGHT
-      } else {
-        const raw = lines.get(item.lineId)?.raw ?? ''
-        total += raw.length > 140 ? LINE_HEIGHT * 2 : LINE_HEIGHT
-      }
-    }
-    return { offsets: result, totalHeight: total }
-  }, [renderItems, lines])
-
-  const visibleRange = useMemo(() => {
-    const firstVisible = offsets.offsets.findIndex((offset, index) => {
-      const nextOffset = offsets.offsets[index + 1] ?? offsets.totalHeight
-      return nextOffset >= scrollTop
-    })
-    const lastVisible = offsets.offsets.findIndex(offset => offset > scrollTop + viewportHeight)
-    const start = Math.max(0, (firstVisible === -1 ? renderItems.length - 1 : firstVisible) - OVERSCAN)
-    const end = Math.min(renderItems.length, (lastVisible === -1 ? renderItems.length : lastVisible) + OVERSCAN)
-    return { start, end }
-  }, [offsets, renderItems.length, scrollTop, viewportHeight])
+    return { blocks, height }
+  }, [lines, segments, segmentOrder, segmentOrderDisplay, levelFilter, streamFilter, fieldFilter, lineHeight])
 
   useEffect(() => {
     const element = parentRef.current
     if (!element) return
-    const updateSize = () => setViewportHeight(element.clientHeight || 240)
-    updateSize()
-    window.addEventListener('resize', updateSize)
-    return () => window.removeEventListener('resize', updateSize)
+    const observer = new ResizeObserver(() => setViewportHeight(element.clientHeight))
+    observer.observe(element)
+    return () => observer.disconnect()
   }, [])
 
-  const scrollToBottom = useCallback(
-    throttle(() => {
-      if (!autoScroll || renderItems.length === 0) return
-      const element = parentRef.current
-      if (!element) return
-      // 逆序模式最新段在顶部，滚动到顶部；正序模式滚动到底部
-      if (segmentOrderDisplay === 'desc') {
-        element.scrollTop = 0
-      } else {
-        element.scrollTop = Math.max(0, offsets.totalHeight - element.clientHeight)
-      }
-    }, 100),
-    [autoScroll, renderItems.length, offsets.totalHeight, segmentOrderDisplay],
-  )
+  const liveEnd = segmentOrderDisplay === 'desc' ? layout.blocks[0]?.end ?? 0 : layout.height
+  useLayoutEffect(() => {
+    const element = parentRef.current
+    if (!element || !autoScroll || scrollTargetLineId) return
+    element.scrollTop = Math.max(0, liveEnd - element.clientHeight)
+    setScrollTop(element.scrollTop)
+  }, [autoScroll, liveEnd, viewportHeight, scrollTargetLineId])
 
-  useImperativeHandle(ref, () => ({
-    scrollToTop: () => {
-      const element = parentRef.current
-      if (element) element.scrollTop = 0
-    },
-    scrollToBottom: () => {
-      const element = parentRef.current
-      if (element) element.scrollTop = Math.max(0, offsets.totalHeight - element.clientHeight)
-    },
-  }), [offsets.totalHeight])
-
-  useEffect(() => {
-    scrollToBottom()
-  }, [renderItems.length, scrollToBottom])
-
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (!scrollTargetLineId) return
-    const index = renderItems.findIndex(item => item.type === 'line' && item.lineId === scrollTargetLineId)
-    if (index !== -1 && parentRef.current) {
-      parentRef.current.scrollTop = offsets.offsets[index] ?? 0
+    const element = parentRef.current
+    const line = lines.get(scrollTargetLineId)
+    const block = layout.blocks.find(item => item.segment.cmdId === line?.cmdId)
+    const index = block?.lineIds.indexOf(scrollTargetLineId) ?? -1
+    if (element && block && index >= 0) {
+      element.scrollTop = block.top + HEADER_HEIGHT + index * lineHeight
+      setScrollTop(element.scrollTop)
     }
     consumeScrollTarget()
-  }, [scrollTargetLineId, renderItems, offsets.offsets, consumeScrollTarget])
+  }, [scrollTargetLineId, layout.blocks, lines, consumeScrollTarget, lineHeight])
 
+  const regex = useMemo(() => buildSearchRegex(searchQuery, searchOptions), [searchQuery, searchOptions])
   const matchedSet = useMemo(() => new Set(matchedLineIds), [matchedLineIds])
-  const activeLineId = activeMatchIndex >= 0 ? matchedLineIds[activeMatchIndex] : null
+  const activeLineId = matchedLineIds[activeMatchIndex]
+  const start = Math.max(0, Math.min(scrollTop, layout.height - viewportHeight) - OVERSCAN_PX)
+  const end = start + viewportHeight + 2 * OVERSCAN_PX
 
   return (
     <div
       ref={parentRef}
-      className="flex-1 overflow-auto bg-slate-950 font-mono"
+      className="flex-1 min-h-0 overflow-auto bg-slate-950 font-mono [overflow-anchor:none]"
+      style={{ fontSize, lineHeight: `${lineHeight}px` }}
       onScroll={event => setScrollTop(event.currentTarget.scrollTop)}
     >
-      {renderItems.length === 0 ? (
+      {layout.blocks.length === 0 ? (
         <div className="h-full flex items-center justify-center text-sm text-slate-500">
           暂无日志输出
         </div>
       ) : (
-        <div style={{ height: offsets.totalHeight, position: 'relative' }}>
-          {renderItems.slice(visibleRange.start, visibleRange.end).map((item, localIndex) => {
-            const index = visibleRange.start + localIndex
-            const top = offsets.offsets[index] ?? 0
+        <div style={{ height: layout.height, position: 'relative' }}>
+          {layout.blocks.filter(block => block.end > start && block.top < end).map(block => {
+            const { segment, lineIds, top } = block
+            const bodyTop = top + HEADER_HEIGHT
+            const first = Math.max(0, Math.floor((start - bodyTop) / lineHeight))
+            const last = Math.min(lineIds.length, Math.ceil((end - bodyTop) / lineHeight))
             return (
-              <div
-                key={item.type === 'segment-header' ? `segment-${item.cmdId}` : `line-${item.lineId}`}
-                style={{ position: 'absolute', top, left: 0, right: 0 }}
-              >
-                {item.type === 'segment-header' ? (
-                  <LogSegmentHeader segment={segments.get(item.cmdId)!} onToggle={toggleSegment} />
-                ) : (
-                  lines.get(item.lineId) && (
-                    <LogLine
-                      line={lines.get(item.lineId)!}
-                      searchQuery={searchQuery}
-                      caseSensitive={searchOptions.caseSensitive}
-                      useRegex={searchOptions.useRegex}
-                      isMatched={matchedSet.has(item.lineId)}
-                      isActiveMatch={activeLineId === item.lineId}
-                    />
-                  )
+              <div key={segment.cmdId}>
+                {top >= start - HEADER_HEIGHT && (
+                  <div className="absolute inset-x-0" style={{ top, height: HEADER_HEIGHT }}>
+                    <LogSegmentHeader segment={segment} onToggle={toggleSegment} allowReplay={!archive} />
+                  </div>
                 )}
+                {lineIds.slice(first, Math.max(first, last)).map((id, index) => {
+                  const line = lines.get(id)
+                  return line && (
+                    <div key={id} className="absolute left-0 min-w-full w-max" style={{
+                      top: bodyTop + (first + index) * lineHeight,
+                      height: lineHeight,
+                    }}>
+                      <LogLine line={line} regex={regex} isMatched={matchedSet.has(id)} isActiveMatch={activeLineId === id} />
+                    </div>
+                  )
+                })}
               </div>
             )
           })}
@@ -181,6 +123,4 @@ const LogContent = forwardRef<LogContentHandle>(function LogContent(_props, ref)
       )}
     </div>
   )
-})
-
-export default LogContent
+}

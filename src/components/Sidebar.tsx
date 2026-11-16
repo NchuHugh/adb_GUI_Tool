@@ -1,8 +1,9 @@
+import { useState } from 'react'
 import { useCommandStore } from '../store/commandStore'
 import { useLogStore } from '../store/logStore'
 import { useFavoriteStore } from '../store/favoriteStore'
 import * as Icons from 'lucide-react'
-import { Layers, Clock, Plus, Star } from 'lucide-react'
+import { Layers, Clock, Plus, Star, ChevronRight, Terminal } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import GroupManager from './GroupManager'
 
@@ -12,7 +13,11 @@ function getIcon(iconName: string): LucideIcon {
   return icon || Layers
 }
 
-export default function Sidebar() {
+export default function Sidebar({ shellOpen, onNavigate }: {
+  shellOpen: boolean
+  onNavigate: (view: 'commands' | 'shell') => void
+}) {
+  const [groupsOpen, setGroupsOpen] = useState(false)
   const groups = useCommandStore(s => s.groups)
   const selectedGroupId = useCommandStore(s => s.selectedGroupId)
   const selectGroup = useCommandStore(s => s.selectGroup)
@@ -40,33 +45,40 @@ export default function Sidebar() {
       className="flex-shrink-0 bg-sidebar-bg border-r border-divider flex flex-col overflow-y-auto overflow-x-hidden no-select"
       style={{ width: 160 }}
     >
-      {/* 全部命令 */}
-      <button
-        className={`sidebar-group-item mt-2 mx-2 ${selectedGroupId === null ? 'active' : ''}`}
-        onClick={() => selectGroup(null)}
-      >
-        <Layers size={18} />
-        <span>全部命令</span>
+      <div className="mx-2 mt-2 flex items-stretch">
+        <button
+          className={`sidebar-group-item min-w-0 flex-1 pr-1 ${!shellOpen && selectedGroupId === null ? 'active' : ''}`}
+          onClick={() => { selectGroup(null); onNavigate('commands') }}
+        >
+          <Layers size={18} className="shrink-0" />
+          <span>全部命令</span>
+        </button>
+        <button type="button" aria-label="命令分组" title="命令分组" aria-expanded={groupsOpen}
+          aria-controls="command-groups" className="btn-ghost rounded px-1.5"
+          onClick={() => setGroupsOpen(open => !open)}>
+          <ChevronRight size={15} className={groupsOpen ? 'rotate-90' : ''} />
+        </button>
+      </div>
+
+      <div id="command-groups" hidden={!groupsOpen} className="ml-4 mr-2 border-l border-divider pl-1">
+        {groups.map(group => {
+          const IconComponent = getIcon(group.icon)
+          return (
+            <button key={group.id}
+              className={`sidebar-group-item w-full ${!shellOpen && selectedGroupId === group.id ? 'active' : ''}`}
+              onClick={() => { selectGroup(group.id); onNavigate('commands') }}>
+              <IconComponent size={16} className="shrink-0" />
+              <span className="truncate">{group.label}</span>
+            </button>
+          )
+        })}
+      </div>
+
+      <button className={`sidebar-group-item mx-2 mt-1 ${shellOpen ? 'active' : ''}`}
+        onClick={() => onNavigate('shell')}>
+        <Terminal size={18} />
+        <span>设备 Shell</span>
       </button>
-
-      {/* 分隔线 */}
-      <div className="mx-3 my-2 border-t border-divider" />
-
-      {/* 分组列表 */}
-      {groups.map(group => {
-        const IconComponent = getIcon(group.icon)
-        const isActive = selectedGroupId === group.id
-        return (
-          <button
-            key={group.id}
-            className={`sidebar-group-item mx-2 ${isActive ? 'active' : ''}`}
-            onClick={() => selectGroup(group.id)}
-          >
-            <IconComponent size={18} />
-            <span>{group.label}</span>
-          </button>
-        )
-      })}
 
       {/* 底部：新增命令 + 收藏 + 历史记录按钮 */}
       <div className="mt-auto border-t border-divider pt-2 pb-2 space-y-1">

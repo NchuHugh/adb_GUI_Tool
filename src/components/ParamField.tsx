@@ -5,6 +5,7 @@ interface ParamFieldProps {
   param: CommandParam
   value: string
   error?: string
+  multiline?: boolean
   onChange: (key: string, value: string) => void
   onFillRequest?: (key: string) => void
 }
@@ -16,12 +17,25 @@ const NO_SPELL = {
   autoComplete: 'off' as const,
 }
 
-export default function ParamField({ param, value, error, onChange, onFillRequest }: ParamFieldProps) {
+export default function ParamField({ param, value, error, multiline, onChange, onFillRequest }: ParamFieldProps) {
   const inputClass = `w-full bg-slate-700 rounded px-3 py-2 text-sm font-mono
     border ${error ? 'border-red-500' : 'border-slate-600'}
     focus:outline-none focus:border-blue-500 text-text-primary placeholder:text-slate-500`
 
   const renderInput = () => {
+    if (multiline) {
+      return (
+        <textarea
+          rows={4}
+          aria-label={param.label}
+          value={value}
+          placeholder={param.placeholder}
+          onChange={e => onChange(param.key, e.target.value)}
+          className={inputClass}
+          {...NO_SPELL}
+        />
+      )
+    }
     switch (param.type) {
       case 'select':
         return (

@@ -100,7 +100,7 @@ export const useCommandStore = create<CommandStore>((set, get) => ({
     const validCommands = config.commands.filter(c => !c.invalid)
     set({
       config,
-      groups: config.groups.sort((a, b) => a.order - b.order),
+      groups: [...config.groups].sort((a, b) => Number(!!a.custom) - Number(!!b.custom) || a.order - b.order),
       commands: validCommands,
     })
   },

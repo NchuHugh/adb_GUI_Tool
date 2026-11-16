@@ -1,20 +1,25 @@
-import { ArrowDownToLine, ArrowUpToLine, ChevronDown, ChevronUp, Copy, Trash2, Square, Maximize2, Download } from 'lucide-react'
+import { ArrowDownToLine, ArrowUpToLine, ChevronDown, ChevronUp, Copy, Trash2, Square, ExternalLink, FolderOpen, Download } from 'lucide-react'
 import { useCommandStore } from '../../store/commandStore'
-import { useLogStore } from '../../store/logStore'
+import { useContext } from 'react'
+import { LogPanelStore } from '../LogPanelStore'
 import { LogLevel } from '../../types'
 import { getVisibleLineIds, stripAnsi } from '../../utils/logUtils'
-import { buildLogExportText } from '../../utils/commandConfigUtils'
+import { serializeLogArchive } from '../../utils/logArchive'
+import LogFontControl from './LogFontControl'
 import LogLevelFilter from './LogLevelFilter'
 
 interface Props {
-  isFloating?: boolean
+  onDetach?: () => void
+  onOpenFile?: () => void
+  archive?: boolean
+  fontSize: number
+  onFontSizeChange: (size: number) => void
 }
 
-export default function LogToolbar({ isFloating = false }: Props) {
+export default function LogToolbar({ onDetach, onOpenFile, archive, fontSize, onFontSizeChange }: Props) {
+  const useLogStore = useContext(LogPanelStore)
   const executionStates = useCommandStore(s => s.executionStates)
-  const lines = useLogStore(s => s.lines)
-  const lineOrder = useLogStore(s => s.lineOrder)
-  const segments = useLogStore(s => s.segments)
+  const hasSegments = useLogStore(s => s.segments.size > 0)
   const levelFilter = useLogStore(s => s.levelFilter)
   const streamFilter = useLogStore(s => s.streamFilter)
   const autoScroll = useLogStore(s => s.autoScroll)
@@ -27,21 +32,15 @@ export default function LogToolbar({ isFloating = false }: Props) {
   const toggleLevelFilter = useLogStore(s => s.toggleLevelFilter)
   const setLevelFilter = useLogStore(s => s.setLevelFilter)
   const setStreamFilter = useLogStore(s => s.setStreamFilter)
-  const setIsFloating = useLogStore(s => s.setIsFloating)
 
   const handleExport = async () => {
-    const text = buildLogExportText(
-      useLogStore.getState().segmentOrder,
-      segmentOrderDisplay,
-      segments,
-      lines,
-    )
+    const text = serializeLogArchive(useLogStore.getState())
     const result = await window.electronAPI.exportLog(text)
     if (result.error) window.alert(`导出日志失败：${result.error}`)
     else if (!result.canceled && result.path) window.alert(`日志已保存到：${result.path}`)
   }
 
-  const runningCmdIds = Array.from(executionStates.values())
+  const runningCmdIds = archive ? [] : Array.from(executionStates.values())
     .filter(state => state.status === 'running')
     .map(state => state.cmdId)
 
@@ -50,7 +49,9 @@ export default function LogToolbar({ isFloating = false }: Props) {
   }
 
   const handleCopyVisible = () => {
-    const ids = getVisibleLineIds({ lineOrder, lines, segments, levelFilter, streamFilter })
+    const state = useLogStore.getState()
+    const { lines } = state
+    const ids = getVisibleLineIds(state)
     const text = ids
       .map(id => stripAnsi(lines.get(id)?.raw ?? ''))
       .join('\n')
@@ -107,6 +108,8 @@ export default function LogToolbar({ isFloating = false }: Props) {
 
       <div className="flex-1 min-w-2" />
 
+      <LogFontControl size={fontSize} onChange={onFontSizeChange} />
+
       <button
         className={`btn-ghost px-2 py-1 rounded text-xs flex items-center gap-1 ${autoScroll ? 'text-primary' : 'text-text-secondary'}`}
         onClick={() => setAutoScroll(!autoScroll)}
@@ -118,16 +121,17 @@ export default function LogToolbar({ isFloating = false }: Props) {
       <button className="btn-ghost p-1 rounded" title="复制可见日志" onClick={handleCopyVisible}>
         <Copy size={14} />
       </button>
-      <button className="btn-ghost p-1 rounded disabled:opacity-40" title="导出全部日志" onClick={handleExport} disabled={segments.size === 0}>
+      <button className="btn-ghost p-1 rounded disabled:opacity-40" title="导出全部日志" onClick={handleExport} disabled={!hasSegments}>
         <Download size={14} />
       </button>
-      {!isFloating && (
-        <button
-          className="btn-ghost p-1 rounded"
-          title="最大化日志面板"
-          onClick={() => setIsFloating(true)}
-        >
-          <Maximize2 size={14} />
+      {onOpenFile && (
+        <button className="btn-ghost p-1 rounded" title="打开日志文件" aria-label="打开日志文件" onClick={onOpenFile}>
+          <FolderOpen size={14} />
+        </button>
+      )}
+      {onDetach && (
+        <button className="btn-ghost p-1 rounded" title="独立控制台" aria-label="独立控制台" onClick={onDetach}>
+          <ExternalLink size={14} />
         </button>
       )}
       <button className="btn-ghost p-1 rounded" title="清除日志" onClick={clearLog}>

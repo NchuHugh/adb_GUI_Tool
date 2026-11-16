@@ -4,8 +4,9 @@
 // 通过 IPC 将 stdout/stderr 批量推送到渲染进程
 // ============================================================
 
-import { ChildProcess, spawn, exec } from 'child_process'
+import { ChildProcess, spawn, execFile } from 'child_process'
 import { BrowserWindow } from 'electron'
+import { getAdbDeviceArgs } from '../src/utils/argParser'
 import { IPC_CHANNELS, RunRequest, OutputChunk, DoneEvent } from '../src/types'
 
 interface ActiveJob {
@@ -25,7 +26,14 @@ interface StreamBuffer {
 }
 
 const FLUSH_INTERVAL_MS = 50
-const MAX_BUFFER_LINES = 200
+const MAX_BUFFER_LINES = 1_000
+const MAX_LINE_LENGTH = 65_536
+const TRUNCATED_LINE_SUFFIX = ' [日志行已截断]'
+
+function limitLine(line: string): string {
+  if (line.length <= MAX_LINE_LENGTH) return line
+  return line.slice(0, MAX_LINE_LENGTH) + TRUNCATED_LINE_SUFFIX
+}
 
 function createStreamBuffer(): StreamBuffer {
   return { pendingLine: '', lines: [], flushTimer: null }
@@ -51,7 +59,7 @@ export function isAdbAvailable(): boolean {
 /** 启动时检测 adb 是否可用 */
 export function checkAdbAvailability(): Promise<AdbCheckResult> {
   return new Promise((resolve) => {
-    exec('adb version', { timeout: 5000 }, (err, stdout, stderr) => {
+    execFile('adb', ['version'], { timeout: 5000 }, (err, stdout, stderr) => {
       if (err) {
         const isEnoent = (err as any).code === 'ENOENT' ||
           (err as any).errno === -4058 ||
@@ -87,13 +95,14 @@ export class AdbRunner {
     deviceSerial: string | null,
     window: BrowserWindow,
     timeoutMs: number = 30000,
+    tool: 'adb' | 'fastboot' = 'adb',
   ): Promise<void> {
     return new Promise((resolve) => {
       const { cmdId, resolvedArgs } = request
 
-      if (!_adbAvailable) {
+      if (tool === 'adb' && !_adbAvailable) {
         this.sendLines(window, cmdId, 'stderr', ['\x1b[31m[ERROR] adb 不可用，请先配置 PATH 环境变量\x1b[0m'])
-        window.webContents.send(IPC_CHANNELS.ADB_DONE, {
+        if (!window.isDestroyed()) window.webContents.send(IPC_CHANNELS.ADB_DONE, {
           cmdId,
           exitCode: -2,
           durationMs: 0,
@@ -103,15 +112,8 @@ export class AdbRunner {
         return
       }
 
-      const args: string[] = []
-      if (deviceSerial) {
-        args.push('-s', deviceSerial)
-      }
-      args.push(...resolvedArgs)
-
-      console.log(`[AdbRunner] 执行: adb ${args.join(' ')}`)
-
-      const proc = spawn('adb', args, {
+      const args = tool === 'adb' ? getAdbDeviceArgs(resolvedArgs, deviceSerial) : resolvedArgs
+      const proc = spawn(tool, args, {
         windowsHide: true,
         stdio: ['ignore', 'pipe', 'pipe'],
       })
@@ -135,12 +137,12 @@ export class AdbRunner {
         }, timeoutMs)
       }
 
-      proc.stdout?.on('data', (data: Buffer) => {
-        this.appendChunk(window, cmdId, 'stdout', job.stdoutBuffer, data.toString())
+      proc.stdout?.setEncoding('utf8').on('data', (data: string) => {
+        this.appendChunk(window, cmdId, 'stdout', job.stdoutBuffer, data)
       })
 
-      proc.stderr?.on('data', (data: Buffer) => {
-        this.appendChunk(window, cmdId, 'stderr', job.stderrBuffer, data.toString())
+      proc.stderr?.setEncoding('utf8').on('data', (data: string) => {
+        this.appendChunk(window, cmdId, 'stderr', job.stderrBuffer, data)
       })
 
       proc.on('close', (code) => {
@@ -153,7 +155,7 @@ export class AdbRunner {
         const reason = job.terminationReason ?? 'normal'
         this.activeJobs.delete(cmdId)
 
-        window.webContents.send(IPC_CHANNELS.ADB_DONE, {
+        if (!window.isDestroyed()) window.webContents.send(IPC_CHANNELS.ADB_DONE, {
           cmdId,
           exitCode: reason === 'normal' ? (code ?? -1) : -1,
           durationMs,
@@ -163,24 +165,11 @@ export class AdbRunner {
         resolve()
       })
 
-      proc.on('error', (err) => {
-        const durationMs = Date.now() - startTime
-        if (job.timeoutHandle) clearTimeout(job.timeoutHandle)
-
-        this.flushBuffer(window, cmdId, 'stdout', job.stdoutBuffer, true)
-        this.flushBuffer(window, cmdId, 'stderr', job.stderrBuffer, true)
-        this.sendLines(window, cmdId, 'stderr', [`\x1b[31m进程错误: ${err.message}\x1b[0m`])
-
-        const reason = job.terminationReason ?? 'normal'
-        this.activeJobs.delete(cmdId)
-
-        window.webContents.send(IPC_CHANNELS.ADB_DONE, {
-          cmdId,
-          exitCode: -1,
-          durationMs,
-          reason,
-        } satisfies DoneEvent)
-        resolve()
+      proc.on('error', (err: NodeJS.ErrnoException) => {
+        const message = err.code === 'ENOENT'
+          ? `系统 PATH 中找不到 ${tool}，请检查 Android SDK Platform Tools`
+          : err.message
+        this.sendLines(window, cmdId, 'stderr', [`\x1b[31m${message}\x1b[0m`])
       })
     })
   }
@@ -194,8 +183,8 @@ export class AdbRunner {
   ) {
     const combined = buffer.pendingLine + text
     const parts = combined.split('\n')
-    buffer.pendingLine = parts.pop() ?? ''
-    buffer.lines.push(...parts)
+    buffer.pendingLine = limitLine(parts.pop() ?? '')
+    buffer.lines.push(...parts.map(line => limitLine(line.replace(/\r$/, ''))))
 
     if (buffer.lines.length >= MAX_BUFFER_LINES) {
       this.flushBuffer(window, cmdId, stream, buffer, false)
@@ -225,7 +214,7 @@ export class AdbRunner {
     buffer.lines = []
 
     if (includePending && buffer.pendingLine) {
-      batch.push(buffer.pendingLine)
+      batch.push(buffer.pendingLine.replace(/\r$/, ''))
       buffer.pendingLine = ''
     }
 
@@ -254,7 +243,7 @@ export class AdbRunner {
 
     setTimeout(() => {
       try {
-        if (!job.process.killed) {
+        if (this.activeJobs.get(cmdId) === job) {
           job.process.kill('SIGKILL')
         }
       } catch {

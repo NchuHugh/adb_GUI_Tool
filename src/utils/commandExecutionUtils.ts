@@ -1,4 +1,5 @@
 import { CommandDef, DoneEvent } from '../types'
+import { getCommandTool, templateToCommandArgs } from './argParser'
 
 const DANGEROUS_COMMAND_IDS = new Set([
   'adb_root',
@@ -14,13 +15,15 @@ const DANGEROUS_COMMAND_IDS = new Set([
   'adb_forward_remove',
 ])
 
-export function isDangerousCommand(commandId: string): boolean {
-  return DANGEROUS_COMMAND_IDS.has(commandId)
+export function isDangerousCommand(commandId: string, template = ''): boolean {
+  return DANGEROUS_COMMAND_IDS.has(commandId) ||
+    (getCommandTool(template) === 'fastboot' &&
+      !/^fastboot(?:\.exe)?\s+(?:devices(?:\s+-l)?|--version|(?:-s\s+\S+\s+)?getvar\s+(?:\{\w+\}|[\w.:-]+))\s*$/i.test(template))
 }
 
-export function confirmDangerousCommand(command: CommandDef): boolean {
-  if (!isDangerousCommand(command.id)) return true
-  return window.confirm(`确认执行「${command.label}」？\n\n${command.description}\n\n此操作可能产生不可逆的影响，是否继续？`)
+export function confirmDangerousCommand(command: CommandDef, dialogWindow = window): boolean {
+  if (!isDangerousCommand(command.id, command.template)) return true
+  return dialogWindow.confirm(`确认执行「${command.label}」？\n\n${command.description}\n\n此操作可能产生不可逆的影响，是否继续？`)
 }
 
 function escapeRegExp(value: string): string {
@@ -31,12 +34,12 @@ function extractEmbeddedValues(patternToken: string, actualToken: string): Recor
   const keys: string[] = []
   let pattern = '^'
   let lastIndex = 0
-  const placeholderRe = /\{(\w+)\}/g
+  const placeholderRe = /(?<!\$)\{(\w+)\}/g
   let match: RegExpExecArray | null
 
   while ((match = placeholderRe.exec(patternToken)) !== null) {
     pattern += escapeRegExp(patternToken.slice(lastIndex, match.index))
-    pattern += '(.+?)'
+    pattern += '(.*?)'
     keys.push(match[1])
     lastIndex = match.index + match[0].length
   }
@@ -44,10 +47,13 @@ function extractEmbeddedValues(patternToken: string, actualToken: string): Recor
   pattern += escapeRegExp(patternToken.slice(lastIndex))
   pattern += '$'
 
-  const actualMatch = actualToken.match(new RegExp(pattern))
+  const actualMatch = actualToken.match(new RegExp(pattern, 's'))
   if (!actualMatch) return {}
 
-  return Object.fromEntries(keys.map((key, index) => [key, actualMatch[index + 1] ?? '']))
+  return Object.fromEntries(keys.map((key, index) => {
+    const value = actualMatch[index + 1] ?? ''
+    return [key, value.replace(/^'(.*)'$/s, '$1').replace(/'\\''/g, "'")]
+  }))
 }
 
 export function buildInitialValuesFromResolvedArgs(
@@ -59,9 +65,14 @@ export function buildInitialValuesFromResolvedArgs(
     values[param.key] = param.default ?? ''
   }
 
-  const templateArgs = command.template.trim().split(/\s+/).slice(1)
+  const templateArgs = templateToCommandArgs(command.template)
+  const shellIndex = getCommandTool(command.template) === 'adb' ? templateArgs.indexOf('shell') : -1
+  // Older histories could save remote shell source in several adb arguments.
+  const args = shellIndex >= 0 && resolvedArgs.length > templateArgs.length
+    ? [...resolvedArgs.slice(0, templateArgs.length - 1), resolvedArgs.slice(templateArgs.length - 1).join(' ')]
+    : resolvedArgs
   templateArgs.forEach((templateArg, index) => {
-    const actualArg = resolvedArgs[index]
+    const actualArg = args[index]
     if (actualArg === undefined) return
 
     const exactMatch = templateArg.match(/^\{(\w+)\}$/)

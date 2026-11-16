@@ -4,7 +4,8 @@ import { useCommandStore } from '../store/commandStore'
 import { useLogStore } from '../store/logStore'
 import { Star, X, Play, Trash2 } from 'lucide-react'
 import { FavoriteEntry } from '../types'
-import { templateToAdbArgs } from '../utils/argParser'
+import { confirmDangerousCommand } from '../utils/commandExecutionUtils'
+import { templateToCommandArgs } from '../utils/argParser'
 
 /** 根据收藏条目 + 命令配置，构建可读的命令预览 */
 function buildPreviewCommand(entry: FavoriteEntry, template: string | undefined): string {
@@ -73,12 +74,12 @@ export default function FavoritesPanel() {
 
   const handleExecuteFavorite = (entry: FavoriteEntry) => {
     const command = commands.find(c => c.id === entry.commandId)
-    if (!command) return
+    if (!command || command.invalid || !confirmDangerousCommand(command)) return
 
     if (!entry.hasParams || command.params.length === 0) {
       // 无参数：直接执行
       const cmdId = crypto.randomUUID()
-      const resolvedArgs = templateToAdbArgs(command.template, entry.resolvedArgs)
+      const resolvedArgs = templateToCommandArgs(command.template, entry.resolvedArgs)
       useCommandStore.getState().recordPendingMeta(cmdId, command.id, resolvedArgs, command.label)
       useCommandStore.getState().updateExecutionState(cmdId, {
         cmdId,

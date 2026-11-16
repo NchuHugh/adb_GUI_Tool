@@ -1,6 +1,6 @@
 {
   "name": "adb-gui",
-  "version": "1.1.3",
+  "version": "2.0.0",
   "description": "ADB GUI 调试工具 — 面向 Android 专业开发人员的桌面 ADB 命令封装工具",
   "author": "Hugh",
   "main": "dist-electron/main.js",
@@ -9,7 +9,8 @@
     "productName": "ADB GUI",
     "files": [
       "dist-electron/**/*",
-      "config/**/*"
+      "config/commands.json",
+      "config/device-paths.json"
     ],
     "directories": {
       "output": "release",
@@ -29,13 +30,13 @@
     }
   },
   "scripts": {
-    "dev": "vite",
-    "build": "vite build",
-    "typecheck": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p tsconfig.node.json",
-    "lint": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p tsconfig.node.json",
-    "test": "vitest run",
-    "test:watch": "vitest",
-    "preview": "vite preview",
+    "dev": "vite --config config/vite.config.ts",
+    "build": "vite build --config config/vite.config.ts",
+    "typecheck": "tsc --noEmit -p config/tsconfig.json && tsc --noEmit -p config/tsconfig.node.json",
+    "lint": "npm run typecheck",
+    "test": "vitest run --config config/vite.config.ts",
+    "test:watch": "vitest --config config/vite.config.ts",
+    "preview": "vite preview --config config/vite.config.ts",
     "package": "npm run build && electron-builder",
     "package:win": "npm run build && electron-builder --win"
   },

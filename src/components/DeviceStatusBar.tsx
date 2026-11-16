@@ -1,7 +1,11 @@
+import { useState } from 'react'
+import { setTheme, Theme } from '../theme'
 import { useDeviceStore } from '../store/deviceStore'
-import { Smartphone, RefreshCw, AlertTriangle } from 'lucide-react'
+import { Smartphone, RefreshCw, AlertTriangle, Sun, Moon } from 'lucide-react'
 
 export default function DeviceStatusBar() {
+  const [theme, selectTheme] = useState<Theme>(() =>
+    document.documentElement.dataset.theme === 'light' ? 'light' : 'dark')
   const devices = useDeviceStore(s => s.devices)
   const selectedSerial = useDeviceStore(s => s.selectedSerial)
   const selectDevice = useDeviceStore(s => s.selectDevice)
@@ -85,6 +89,29 @@ export default function DeviceStatusBar() {
             ))}
           </select>
         )}
+
+        <div role="group" aria-label="外观" className="inline-flex items-center rounded-full border border-divider bg-app-bg p-0.5">
+          {(['light', 'dark'] as const).map(option => {
+            const Icon = option === 'light' ? Sun : Moon
+            return (
+              <button
+                key={option}
+                type="button"
+                aria-pressed={theme === option}
+                className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs transition-colors ${theme === option
+                  ? 'bg-primary/15 text-primary'
+                  : 'text-text-secondary hover:bg-card-hover hover:text-text-primary'}`}
+                onClick={() => {
+                  selectTheme(option)
+                  setTheme(option)
+                }}
+              >
+                <Icon size={13} aria-hidden="true" />
+                {option === 'light' ? '浅色' : '深色'}
+              </button>
+            )
+          })}
+        </div>
 
         {/* 手动刷新按钮 */}
         <button

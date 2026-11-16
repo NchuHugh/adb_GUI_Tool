@@ -14,6 +14,7 @@ dist-electron/
 # OS
 .DS_Store
 Thumbs.db
+/%SystemDrive%/
 
 # Logs
 *.log

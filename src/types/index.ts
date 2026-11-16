@@ -146,7 +146,6 @@ export interface LogLine {
   cmdId: string
   stream: 'stdout' | 'stderr' | 'system'
   raw: string
-  html: string
   level: LogLevel
   timestamp: number
 }
@@ -155,6 +154,7 @@ export interface LogSegment {
   cmdId: string
   commandLabel: string
   resolvedCommand: string
+  execution?: Pick<RunRequest, 'commandId' | 'resolvedArgs'> & { tool: 'adb' | 'fastboot' }
   startedAt: number
   endedAt?: number
   exitCode?: number
@@ -197,7 +197,28 @@ export interface DevicePathConfig {
 
 // ---- IPC 通道名称常量 ----
 
+export interface DeviceDirectory {
+  path: string
+  entries: { name: string; kind: 'directory' | 'file' | 'link' }[]
+}
+
+export interface DeviceShellResult {
+  path: string
+  stdout: string
+  stderr: string
+  exitCode: number
+}
+
+export type DeviceFileAction =
+  | { type: 'upload'; directory: string }
+  | { type: 'download' | 'delete'; directory: string; name: string }
+  | { type: 'mkdir'; directory: string; name: string }
+  | { type: 'rename'; directory: string; name: string; newName: string }
+
 export const IPC_CHANNELS = {
+  DEVICE_SHELL_LIST: 'device-shell:list',
+  DEVICE_SHELL_RUN: 'device-shell:run',
+  DEVICE_SHELL_FILE: 'device-shell:file',
   COMMANDS_LIST: 'commands:list',
   ADB_RUN: 'adb:run',
   ADB_OUTPUT: 'adb:output',
@@ -212,6 +233,7 @@ export const IPC_CHANNELS = {
   COMMANDS_GROUP_UPDATE: 'commands:group:update',
   COMMANDS_GROUP_DELETE: 'commands:group:delete',
   LOG_EXPORT: 'log:export',
+  LOG_OPEN: 'log:open',
   FAVORITES_LOAD: 'favorites:load',
   FAVORITES_SAVE: 'favorites:save',
   // Phase 7 N3：常用设备路径
@@ -223,6 +245,9 @@ export const IPC_CHANNELS = {
 // ---- contextBridge 暴露的 API 类型 ----
 
 export interface ElectronAPI {
+  listDeviceDirectory: (serial: string, directory?: string) => Promise<DeviceDirectory>
+  runDeviceShell: (serial: string, directory: string, script: string) => Promise<DeviceShellResult>
+  manageDeviceFile: (serial: string, action: DeviceFileAction) => Promise<boolean>
   getCommands: () => Promise<CommandsConfig>
   runCommand: (request: RunRequest) => Promise<void>
   killCommand: (cmdId: string) => void
@@ -245,6 +270,7 @@ export interface ElectronAPI {
   createCommandGroup: (group: Pick<CommandGroup, 'id' | 'label' | 'icon'>) => Promise<{ success: boolean; error?: string; config?: CommandsConfig }>
   updateCommandGroup: (group: CommandGroup) => Promise<{ success: boolean; error?: string; config?: CommandsConfig }>
   deleteCommandGroup: (id: string) => Promise<{ success: boolean; error?: string; config?: CommandsConfig; deletedCommandCount?: number }>
+  openLogFile: () => Promise<{ name: string; text: string } | { error: string } | null>
   exportLog: (text: string) => Promise<{ canceled: boolean; path?: string; error?: string }>
   loadFavorites: () => Promise<FavoriteEntry[]>
   saveFavorites: (entries: FavoriteEntry[]) => Promise<void>

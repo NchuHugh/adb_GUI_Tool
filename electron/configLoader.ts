@@ -6,6 +6,7 @@
 import fs from 'fs'
 import path from 'path'
 import { CommandsConfig, CommandDef, CommandGroup } from '../src/types'
+import { extractTemplatePlaceholders } from '../src/utils/argParser'
 import { createCustomGroup, deleteCustomGroup } from '../src/utils/commandConfigUtils'
 
 const CONFIG_FILENAME = 'commands.json'
@@ -52,6 +53,17 @@ export class ConfigLoader {
     try {
       const raw = fs.readFileSync(this.configPath, 'utf-8')
       const parsed = JSON.parse(raw) as CommandsConfig
+      if (this.configPath !== this.builtinPath) {
+        const builtin = JSON.parse(fs.readFileSync(this.builtinPath, 'utf-8')) as CommandsConfig
+        // Add the new Fastboot commands to existing user configurations.
+        if (!parsed.groups.some(group => group.id === 'fastboot')) {
+          const fastbootGroup = builtin.groups.find(group => group.id === 'fastboot')
+          if (fastbootGroup) parsed.groups.push(fastbootGroup)
+        }
+        const ids = new Set(parsed.commands.map(command => command.id))
+        parsed.commands.push(...builtin.commands.filter(command =>
+          command.groupId === 'fastboot' && !ids.has(command.id)))
+      }
       this.config = parsed
       return parsed
     } catch (err: any) {
@@ -92,7 +104,7 @@ export class ConfigLoader {
       }
 
       // 检查 template 中的占位符与 params 的一致性
-      const templatePlaceholders = this.extractPlaceholders(cmd.template)
+      const templatePlaceholders = extractTemplatePlaceholders(cmd.template)
       const paramKeys = new Set(cmd.params.map(p => p.key))
 
       // template 中的每个占位符必须有对应的 param
@@ -207,7 +219,7 @@ export class ConfigLoader {
       return
     }
 
-    const templatePlaceholders = this.extractPlaceholders(cmd.template)
+    const templatePlaceholders = extractTemplatePlaceholders(cmd.template)
     const paramKeys = new Set(cmd.params.map(p => p.key))
 
     for (const ph of templatePlaceholders) {
@@ -309,16 +321,5 @@ export class ConfigLoader {
     this.config = next
     this.saveConfig()
     return { config: next, deletedCommandCount }
-  }
-
-  /** 提取 template 字符串中的 {key} 占位符 */
-  private extractPlaceholders(template: string): Set<string> {
-    const re = /\{(\w+)\}/g
-    const result = new Set<string>()
-    let match: RegExpExecArray | null
-    while ((match = re.exec(template)) !== null) {
-      result.add(match[1])
-    }
-    return result
   }
 }

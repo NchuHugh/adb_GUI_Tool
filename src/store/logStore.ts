@@ -8,12 +8,13 @@ import {
   LogSegment,
   LogStreamFilter,
 } from '../types'
-import { ansiToHtml, buildSearchRegex, detectLogLevel, getVisibleLineIds, lineMatchesSearch, stripAnsi } from '../utils/logUtils'
+import { buildSearchRegex, detectLogLevel, getVisibleLineIds, lineMatchesSearch, stripAnsi } from '../utils/logUtils'
 
 interface LogStore {
   lines: Map<string, LogLine>
   lineOrder: string[]
   lineSeq: number
+  textSize: number
   segments: Map<string, LogSegment>
   segmentOrder: string[]
 
@@ -24,11 +25,11 @@ interface LogStore {
   activeMatchIndex: number
 
   levelFilter: Set<LogLevel>
+  fieldFilter: string
   streamFilter: LogStreamFilter
   scrollTargetLineId: string | null
 
   // Phase 6: 日志面板布局
-  isFloating: boolean
   logPanelHeight: number
 
   // Phase 7 N2: 日志分段排列顺序（'asc' = 正序，'desc' = 逆序）
@@ -47,9 +48,9 @@ interface LogStore {
   outputCache: Map<string, string>
 
   // 动作
-  appendLine: (line: Omit<LogLine, 'id' | 'html' | 'level'>) => void
-  appendLines: (partials: Array<Omit<LogLine, 'id' | 'html' | 'level'>>) => void
-  openSegment: (cmdId: string, meta: Pick<LogSegment, 'commandLabel' | 'resolvedCommand' | 'startedAt'>) => void
+  appendLine: (line: Omit<LogLine, 'id' | 'level'>) => void
+  appendLines: (partials: Array<Omit<LogLine, 'id' | 'level'>>) => void
+  openSegment: (cmdId: string, meta: Pick<LogSegment, 'commandLabel' | 'resolvedCommand' | 'startedAt' | 'execution'>) => void
   closeSegment: (cmdId: string, exitCode: number, reason: DoneEvent['reason']) => void
   toggleSegment: (cmdId: string) => void
   deleteSegment: (cmdId: string) => void
@@ -61,6 +62,7 @@ interface LogStore {
   navigateMatch: (direction: 'next' | 'prev') => void
   setLevelFilter: (levels: Set<LogLevel>) => void
   toggleLevelFilter: (level: LogLevel) => void
+  setFieldFilter: (filter: string) => void
   setStreamFilter: (filter: LogStreamFilter) => void
   clearLog: () => void
   consumeScrollTarget: () => void
@@ -73,12 +75,11 @@ interface LogStore {
   setOutputCache: (commandId: string, output: string) => void
   getOutputCache: (commandId: string) => string | undefined
   getSegmentText: (cmdId: string) => string
-  setIsFloating: (floating: boolean) => void
   setLogPanelHeight: (height: number) => void
   resizeLogPanel: (deltaY: number) => void
 }
 
-function computeMatches(state: Pick<LogStore, 'searchQuery' | 'searchOptions' | 'lineOrder' | 'lines' | 'segments' | 'levelFilter' | 'streamFilter'>): {
+function computeMatches(state: Pick<LogStore, 'searchQuery' | 'searchOptions' | 'lineOrder' | 'lines' | 'segments' | 'levelFilter' | 'streamFilter' | 'fieldFilter'>): {
   matchedLineIds: string[]
   activeMatchIndex: number
   searchError: string | null
@@ -105,10 +106,11 @@ function computeMatches(state: Pick<LogStore, 'searchQuery' | 'searchOptions' | 
   }
 }
 
-export const useLogStore = create<LogStore>((set, get) => ({
+export const createLogStore = (persistLayout = true) => create<LogStore>((set, get) => ({
   lines: new Map(),
   lineOrder: [],
   lineSeq: 0,
+  textSize: 0,
   segments: new Map(),
   segmentOrder: [],
   searchQuery: '',
@@ -118,14 +120,14 @@ export const useLogStore = create<LogStore>((set, get) => ({
   activeMatchIndex: -1,
   levelFilter: new Set(),
   streamFilter: 'all',
+  fieldFilter: '',
   scrollTargetLineId: null,
-  isFloating: false,
   logPanelHeight: (() => {
     const saved = localStorage.getItem('logPanelHeight')
     return saved ? parseInt(saved, 10) : 280
   })(),
   segmentOrderDisplay: (() => {
-    const saved = localStorage.getItem('logSegmentOrder')
+    const saved = persistLayout && localStorage.getItem('logSegmentOrder')
     return saved === 'desc' ? 'desc' : 'asc'
   })(),
   history: [],
@@ -144,34 +146,45 @@ export const useLogStore = create<LogStore>((set, get) => ({
       const lines = new Map(state.lines)
       let lineOrder = [...state.lineOrder]
       let lineSeq = state.lineSeq
+      let textSize = state.textSize
       const segments = new Map(state.segments)
+      const appendedBySegment = new Map<string, string[]>()
 
       for (const partial of partials) {
-        if (partial.raw === '') continue
+        if (partial.raw === '' || !segments.has(partial.cmdId)) continue
 
         const id = String(lineSeq).padStart(6, '0')
         lineSeq += 1
         const line: LogLine = {
           ...partial,
           id,
-          html: ansiToHtml(partial.raw),
           level: detectLogLevel(partial.raw, partial.stream),
         }
         lines.set(id, line)
+        textSize += line.raw.length
         lineOrder.push(id)
 
-        const segment = segments.get(partial.cmdId)
-        if (segment) {
-          segments.set(partial.cmdId, { ...segment, lineIds: [...segment.lineIds, id] })
-        }
+        const appended = appendedBySegment.get(partial.cmdId)
+        if (appended) appended.push(id)
+        else appendedBySegment.set(partial.cmdId, [id])
       }
 
-      if (lineOrder.length > 100_000) {
-        const toRemove = lineOrder.slice(0, 10_000)
-        lineOrder = lineOrder.slice(10_000)
-        for (const oldId of toRemove) {
-          lines.delete(oldId)
+      for (const [cmdId, ids] of appendedBySegment) {
+        const segment = segments.get(cmdId)
+        if (segment) segments.set(cmdId, { ...segment, lineIds: segment.lineIds.concat(ids) })
+      }
+
+      let removeCount = 0
+      if (lineOrder.length > 100_000 || textSize > 16_000_000) {
+        while (
+          removeCount < lineOrder.length &&
+          (lineOrder.length - removeCount > 95_000 || textSize > 15_000_000)
+        ) {
+          const id = lineOrder[removeCount++]
+          textSize -= lines.get(id)?.raw.length ?? 0
+          lines.delete(id)
         }
+        lineOrder = lineOrder.slice(removeCount)
         for (const [cmdId, current] of segments) {
           segments.set(cmdId, {
             ...current,
@@ -180,13 +193,34 @@ export const useLogStore = create<LogStore>((set, get) => ({
         }
       }
 
-      const nextState = { ...state, lines, lineOrder, lineSeq, segments }
+      if (lineSeq === state.lineSeq || !state.searchQuery.trim() || state.searchError) {
+        return { lines, lineOrder, lineSeq, textSize, segments }
+      }
+
+      const regex = buildSearchRegex(state.searchQuery, state.searchOptions)
+      const newMatches = getVisibleLineIds({
+        ...state,
+        lineOrder: lineOrder.slice(-Math.min(lineSeq - state.lineSeq, lineOrder.length)).filter(id => !state.lines.has(id)),
+        lines,
+        segments,
+      }).filter(id => lineMatchesSearch(lines.get(id)!, regex))
+      const previousMatches = removeCount > 0
+        ? state.matchedLineIds.filter(id => lines.has(id))
+        : state.matchedLineIds
+      if (!newMatches.length && previousMatches === state.matchedLineIds) {
+        return { lines, lineOrder, lineSeq, textSize, segments }
+      }
+      const matchedLineIds = previousMatches.concat(newMatches)
+      const activeId = state.matchedLineIds[state.activeMatchIndex]
+      const activeMatchIndex = activeId ? matchedLineIds.indexOf(activeId) : -1
       return {
         lines,
         lineOrder,
         lineSeq,
+        textSize,
         segments,
-        ...computeMatches(nextState),
+        matchedLineIds,
+        activeMatchIndex: activeMatchIndex >= 0 ? activeMatchIndex : matchedLineIds.length ? 0 : -1,
       }
     })
   },
@@ -196,10 +230,8 @@ export const useLogStore = create<LogStore>((set, get) => ({
       if (state.segments.has(cmdId)) return {}
       const segments = new Map(state.segments)
       segments.set(cmdId, {
+        ...meta,
         cmdId,
-        commandLabel: meta.commandLabel,
-        resolvedCommand: meta.resolvedCommand,
-        startedAt: meta.startedAt,
         lineIds: [],
         isCollapsed: false,
       })
@@ -224,7 +256,9 @@ export const useLogStore = create<LogStore>((set, get) => ({
     const deletedSet = new Set(segment.lineIds)
 
     const newLines = new Map(get().lines)
+    let textSize = get().textSize
     for (const lineId of segment.lineIds) {
+      textSize -= newLines.get(lineId)?.raw.length ?? 0
       newLines.delete(lineId)
     }
 
@@ -245,6 +279,7 @@ export const useLogStore = create<LogStore>((set, get) => ({
 
     set({
       lines: newLines,
+      textSize,
       lineOrder: newLineOrder,
       segments: newSegments,
       segmentOrder: newSegmentOrder,
@@ -283,7 +318,7 @@ export const useLogStore = create<LogStore>((set, get) => ({
 
   toggleSegmentOrder: () => {
     const next = get().segmentOrderDisplay === 'asc' ? 'desc' : 'asc'
-    localStorage.setItem('logSegmentOrder', next)
+    if (persistLayout) localStorage.setItem('logSegmentOrder', next)
     set({ segmentOrderDisplay: next })
   },
 
@@ -317,7 +352,7 @@ export const useLogStore = create<LogStore>((set, get) => ({
         segments.set(segment.cmdId, { ...segment, isCollapsed: false })
       }
     }
-    set({ activeMatchIndex: nextIndex, scrollTargetLineId: targetLineId, segments })
+    set({ autoScroll: false, activeMatchIndex: nextIndex, scrollTargetLineId: targetLineId, segments })
   },
 
   setLevelFilter: (levelFilter) => {
@@ -340,6 +375,11 @@ export const useLogStore = create<LogStore>((set, get) => ({
     get().setLevelFilter(next)
   },
 
+  setFieldFilter: fieldFilter => set(state => ({
+    fieldFilter,
+    ...computeMatches({ ...state, fieldFilter }),
+  })),
+
   setStreamFilter: (streamFilter) => {
     set((state) => {
       const nextState = { ...state, streamFilter }
@@ -351,6 +391,7 @@ export const useLogStore = create<LogStore>((set, get) => ({
     lines: new Map(),
     lineOrder: [],
     lineSeq: 0,
+    textSize: 0,
     segments: new Map(),
     segmentOrder: [],
     matchedLineIds: [],
@@ -419,8 +460,6 @@ export const useLogStore = create<LogStore>((set, get) => ({
       .join('\n')
   },
 
-  setIsFloating: (isFloating) => set({ isFloating }),
-
   setLogPanelHeight: (logPanelHeight) => {
     localStorage.setItem('logPanelHeight', String(Math.round(logPanelHeight)))
     set({ logPanelHeight })
@@ -437,3 +476,5 @@ export const useLogStore = create<LogStore>((set, get) => ({
     })
   },
 }))
+
+export const useLogStore = createLogStore()

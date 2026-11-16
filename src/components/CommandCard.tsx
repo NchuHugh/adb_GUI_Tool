@@ -4,7 +4,7 @@ import { useCommandStore } from '../store/commandStore'
 import { Loader2, CheckCircle2, XCircle, ChevronRight, Trash2, Pencil, Star } from 'lucide-react'
 import { useFavoriteStore } from '../store/favoriteStore'
 import { confirmDangerousCommand, isDangerousCommand } from '../utils/commandExecutionUtils'
-import { templateToAdbArgs } from '../utils/argParser'
+import { templateToCommandArgs } from '../utils/argParser'
 
 interface Props {
   command: CommandDef
@@ -24,7 +24,7 @@ export default function CommandCard({ command }: Props) {
   // Bug 8 fix: 流式命令（timeout=0）运行时禁止再次点击
   const isStreamRunning = command.timeout === 0 && recentExec?.status === 'running'
 
-  const isDangerous = isDangerousCommand(command.id)
+  const isDangerous = isDangerousCommand(command.id, command.template)
 
   const handleClick = async () => {
     setErrorMsg(null)
@@ -46,8 +46,7 @@ export default function CommandCard({ command }: Props) {
     // 生成执行 ID
     const cmdId = crypto.randomUUID()
 
-    // 构建 resolvedArgs：从 template 中分离出参数（去除 'adb' 前缀）
-    const resolvedArgs = templateToAdbArgs(command.template)
+    const resolvedArgs = templateToCommandArgs(command.template)
 
     const request: RunRequest = {
       cmdId,

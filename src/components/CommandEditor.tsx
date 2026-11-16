@@ -1,3 +1,4 @@
+import { extractTemplatePlaceholders } from '../utils/argParser'
 import { useState, useEffect } from 'react'
 import { useCommandStore } from '../store/commandStore'
 import { CommandDef, CommandParam, OutputMode, ParamType } from '../types'
@@ -119,17 +120,16 @@ export default function CommandEditor() {
     if (!label.trim()) return '命令名称不能为空'
     if (!template.trim()) return '命令模板不能为空'
 
+    const placeholders = extractTemplatePlaceholders(template)
     for (const p of params) {
       if (!p.key.trim()) return '所有参数必须填写 key'
       if (!/^[a-zA-Z][a-zA-Z0-9_]*$/.test(p.key.trim())) return `参数 key "${p.key}" 格式不正确`
-      if (!template.includes(`{${p.key}}`)) return `参数 "{${p.key}}" 未在模板中使用`
+      if (!placeholders.has(p.key.trim())) return `参数 "{${p.key}}" 未在模板中使用`
     }
 
     // 检查模板中的占位符是否都有对应参数
-    const placeholders = template.match(/\{(\w+)\}/g) || []
-    for (const ph of placeholders) {
-      const key = ph.slice(1, -1)
-      if (!params.some(p => p.key === key)) {
+    for (const key of placeholders) {
+      if (!params.some(p => p.key.trim() === key)) {
         return `模板中的 "{${key}}" 缺少对应参数定义`
       }
     }
@@ -193,7 +193,7 @@ export default function CommandEditor() {
           <div>
             <h2 className="text-lg font-semibold text-text-primary">{title}</h2>
             <p className="text-xs text-text-secondary mt-0.5">
-              {isEditMode ? '修改后将覆盖原有配置' : '自定义 adb 命令将保存到用户配置目录'}
+              {isEditMode ? '修改后将覆盖原有配置' : '支持 adb 与 fastboot 命令，保存到用户配置目录'}
             </p>
           </div>
           <button className="btn-ghost p-1 rounded-md" onClick={handleClose} title="关闭">

@@ -1,3 +1,4 @@
+import LogFieldFilter from './LogFieldFilter'
 import { ChevronDown, ChevronUp, Search, X } from 'lucide-react'
 import { LogSearchOptions } from '../../types'
 
@@ -48,11 +49,13 @@ export default function LogSearchBar({
             onQueryChange('')
           }
         }}
+        aria-label="搜索日志"
         placeholder="搜索日志..."
-        className={`flex-1 bg-slate-800 rounded px-2 py-1 text-sm text-text-primary border focus:outline-none ${
+        className={`flex-1 min-w-0 bg-slate-800 rounded px-2 py-1 text-sm text-text-primary border focus:outline-none ${
           error ? 'border-red-500' : 'border-slate-700 focus:border-primary'
         }`}
       />
+      <LogFieldFilter />
       <button
         className={toggleButtonClass(options.caseSensitive)}
         onClick={() => onOptionsChange({ caseSensitive: !options.caseSensitive })}

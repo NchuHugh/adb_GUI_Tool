@@ -1,5 +1,7 @@
 import { LogLevel, LogLine, LogRenderItem, LogSearchOptions, LogSegment, LogStreamFilter } from '../types'
 
+const THREADTIME_PATTERN = /^(?:\d{4}-)?\d{2}-\d{2}\s+[\d:.]+\s+(\d+)\s+\d+\s+([VDIWEFS])\s+([^:]+):/
+const BRIEF_PATTERN = /^([VDIWEFS])\/(.*?)\(\s*(\d+)\):/
 const ANSI_PATTERN = /\x1b\[[0-9;]*m/g
 
 export function stripAnsi(value: string): string {
@@ -27,14 +29,14 @@ export function ansiToHtml(value: string): string {
   let match: RegExpExecArray | null
 
   const colorForCode: Record<string, string> = {
-    '30': '#94a3b8',
+    '30': 'rgb(var(--slate-400))',
     '31': '#ef4444',
     '32': '#22c55e',
     '33': '#f59e0b',
     '34': '#3b82f6',
     '35': '#a855f7',
     '36': '#06b6d4',
-    '37': '#f1f5f9',
+    '37': 'rgb(var(--text-primary))',
     '90': '#64748b',
   }
 
@@ -69,9 +71,12 @@ export function detectLogLevel(raw: string, stream: LogLine['stream']): LogLevel
   if (stream === 'system') return 'unknown'
 
   const plain = stripAnsi(raw)
+  const threadtime = THREADTIME_PATTERN.exec(plain)
+  const brief = BRIEF_PATTERN.exec(plain)
   const logcatMatch = plain.match(/^\s*([VDIWEF])\s+[\w.]+\s*:/)
     ?? plain.match(/^\d{2}-\d{2}\s+[\d:.]+\s+\d+\s+\d+\s+([VDIWEF])\s+[\w./]+\s*:/)
-  if (logcatMatch) {
+  const priority = threadtime?.[2] ?? brief?.[1] ?? logcatMatch?.[1]
+  if (priority) {
     const map: Record<string, LogLevel> = {
       V: 'verbose',
       D: 'debug',
@@ -80,7 +85,7 @@ export function detectLogLevel(raw: string, stream: LogLine['stream']): LogLevel
       E: 'error',
       F: 'error',
     }
-    return map[logcatMatch[1]] ?? 'unknown'
+    return map[priority] ?? 'unknown'
   }
 
   const lower = plain.toLowerCase()
@@ -108,12 +113,20 @@ export function lineMatchesSearch(line: LogLine, regex: RegExp | null): boolean 
   return regex.test(stripAnsi(line.raw))
 }
 
+export function getLogcatFields(text: string): { pid: string; tag: string } {
+  const threadtime = THREADTIME_PATTERN.exec(text)
+  if (threadtime) return { pid: threadtime[1], tag: threadtime[3].trim() }
+  const brief = BRIEF_PATTERN.exec(text)
+  return { pid: brief?.[3] ?? '', tag: brief?.[2].trim() ?? '' }
+}
+
 export function getVisibleLineIds(state: {
   lineOrder: string[]
   lines: Map<string, LogLine>
   segments: Map<string, LogSegment>
   levelFilter: Set<LogLevel>
   streamFilter: LogStreamFilter
+  fieldFilter?: string
 }): string[] {
   const collapsedCmdIds = new Set(
     Array.from(state.segments.values())
@@ -121,13 +134,22 @@ export function getVisibleLineIds(state: {
       .map(segment => segment.cmdId),
   )
 
+  const terms = (state.fieldFilter ?? '').toLowerCase().trim().split(/\s+/).filter(Boolean)
   return state.lineOrder.filter(id => {
     const line = state.lines.get(id)
     if (!line) return false
     if (line.stream !== 'system' && collapsedCmdIds.has(line.cmdId)) return false
     if (state.levelFilter.size > 0 && !state.levelFilter.has(line.level)) return false
     if (state.streamFilter !== 'all' && line.stream !== 'system' && line.stream !== state.streamFilter) return false
-    return true
+    if (!terms.length) return true
+    const plain = stripAnsi(line.raw)
+    const { pid, tag } = getLogcatFields(plain)
+    const lowerTag = tag.toLowerCase()
+    return terms.every(term => {
+      if (term.startsWith('pid:')) return pid === term.slice(4)
+      if (term.startsWith('tag:')) return lowerTag.includes(term.slice(4))
+      return plain.toLowerCase().includes(term)
+    })
   })
 }
 
@@ -161,34 +183,14 @@ export function buildRenderItems(state: {
 }
 
 export function getLineClassName(line: LogLine): string {
-  if (line.stream === 'stderr') return 'text-red-400'
+  if (line.stream === 'stderr') return 'text-error'
   const colors: Record<LogLevel, string> = {
     verbose: 'text-slate-500',
-    debug: 'text-sky-400',
-    info: 'text-green-400',
-    warning: 'text-amber-400',
-    error: 'text-red-400',
+    debug: 'log-debug',
+    info: 'text-success',
+    warning: 'text-warning',
+    error: 'text-error',
     unknown: 'text-slate-300',
   }
   return colors[line.level]
-}
-
-export function injectSearchHighlight(html: string, raw: string, regex: RegExp | null): string {
-  if (!regex) return html
-  const plain = stripAnsi(raw)
-  regex.lastIndex = 0
-  const matches = Array.from(plain.matchAll(regex))
-    .map(match => match[0])
-    .filter(Boolean)
-  if (matches.length === 0) return html
-
-  let result = html
-  for (const matchText of Array.from(new Set(matches))) {
-    const escaped = escapeHtml(matchText)
-    result = result.replace(
-      new RegExp(escapeRegex(escaped), 'g'),
-      `<mark class="bg-yellow-300/40 text-inherit rounded px-0.5">${escaped}</mark>`,
-    )
-  }
-  return result
 }

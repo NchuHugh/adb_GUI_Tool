@@ -5,8 +5,15 @@
 
 import { contextBridge, ipcRenderer } from 'electron'
 import { IPC_CHANNELS } from '../src/types'
+import type { DeviceFileAction } from '../src/types'
 
 const electronAPI = {
+  listDeviceDirectory: (serial: string, directory?: string) =>
+    ipcRenderer.invoke(IPC_CHANNELS.DEVICE_SHELL_LIST, serial, directory),
+  runDeviceShell: (serial: string, directory: string, script: string) =>
+    ipcRenderer.invoke(IPC_CHANNELS.DEVICE_SHELL_RUN, serial, directory, script),
+  manageDeviceFile: (serial: string, action: DeviceFileAction) =>
+    ipcRenderer.invoke(IPC_CHANNELS.DEVICE_SHELL_FILE, serial, action),
   // 获取全部命令配置
   getCommands: () => ipcRenderer.invoke(IPC_CHANNELS.COMMANDS_LIST),
 
@@ -80,6 +87,7 @@ const electronAPI = {
   createCommandGroup: (group: any) => ipcRenderer.invoke(IPC_CHANNELS.COMMANDS_GROUP_CREATE, group),
   updateCommandGroup: (group: any) => ipcRenderer.invoke(IPC_CHANNELS.COMMANDS_GROUP_UPDATE, group),
   deleteCommandGroup: (id: string) => ipcRenderer.invoke(IPC_CHANNELS.COMMANDS_GROUP_DELETE, id),
+  openLogFile: () => ipcRenderer.invoke(IPC_CHANNELS.LOG_OPEN),
   exportLog: (text: string) => ipcRenderer.invoke(IPC_CHANNELS.LOG_EXPORT, text),
 
   // F3: 收藏功能

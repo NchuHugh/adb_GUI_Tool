@@ -1,6 +1,7 @@
 {
   "version": "1.0",
   "groups": [
+    {"id": "fastboot", "label": "Fastboot", "icon": "Usb", "order": 8},
     { "id": "device", "label": "设备管理", "icon": "Smartphone", "order": 1 },
     { "id": "file", "label": "文件操作", "icon": "FolderOpen", "order": 2 },
     { "id": "app", "label": "应用调试", "icon": "Package", "order": 3 },
@@ -10,6 +11,22 @@
     { "id": "shell", "label": "Shell 快捷", "icon": "Terminal", "order": 7 }
   ],
   "commands": [
+    {"id": "fastboot_devices", "groupId": "fastboot", "label": "查看 Fastboot 设备", "description": "列出已连接的 Fastboot 设备", "template": "fastboot devices -l", "params": [], "outputMode": "once", "timeout": 10000, "tags": ["fastboot"], "fillable": false},
+    {"id": "fastboot_version", "groupId": "fastboot", "label": "Fastboot 版本", "description": "检查本地 Fastboot 版本", "template": "fastboot --version", "params": [], "outputMode": "once", "timeout": 10000, "tags": ["fastboot"], "fillable": false},
+    {"id": "fastboot_getvar", "groupId": "fastboot", "label": "查询 Bootloader 变量", "description": "读取指定变量，如 product 或 current-slot", "template": "fastboot getvar {variable}", "params": [{"key": "variable", "label": "变量名", "type": "text", "required": true, "default": "product"}], "outputMode": "once", "timeout": 10000, "tags": ["fastboot"], "fillable": false},
+    {"id": "fastboot_reboot", "groupId": "fastboot", "label": "重启 Fastboot 设备", "description": "退出 Fastboot 模式并重启设备", "template": "fastboot reboot", "params": [], "outputMode": "once", "timeout": 10000, "tags": ["fastboot"], "fillable": false},
+    {
+      "id": "fastboot_flashing_unlock",
+      "groupId": "fastboot",
+      "label": "解锁 Bootloader（OEM）",
+      "description": "设备须已启用 OEM 解锁并进入 Bootloader 模式。在设备上确认后会恢复出厂设置并清除用户数据。",
+      "template": "fastboot flashing unlock",
+      "params": [],
+      "outputMode": "once",
+      "timeout": 60000,
+      "tags": ["fastboot", "oem", "unlock"],
+      "fillable": false
+    },
     {
       "id": "adb_root",
       "groupId": "device",

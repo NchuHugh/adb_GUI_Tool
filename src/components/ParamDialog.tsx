@@ -4,7 +4,7 @@ import { useFavoriteStore } from '../store/favoriteStore'
 import ParamField from './ParamField'
 import { X, BookmarkPlus } from 'lucide-react'
 import { RunRequest } from '../types'
-import { templateToAdbArgs } from '../utils/argParser'
+import { formatCommand, getCommandTool, templateToCommandArgs } from '../utils/argParser'
 
 export default function ParamDialog() {
   const paramDialog = useCommandStore(s => s.paramDialog)
@@ -47,11 +47,7 @@ export default function ParamDialog() {
   // 预览命令
   const previewCommand = useMemo(() => {
     if (!command) return ''
-    let cmd = command.template
-    for (const [key, val] of Object.entries(values)) {
-      cmd = cmd.replace(`{${key}}`, val || `{${key}}`)
-    }
-    return cmd
+    return formatCommand(getCommandTool(command.template), templateToCommandArgs(command.template, values))
   }, [command, values])
 
   // 校验并执行
@@ -72,7 +68,7 @@ export default function ParamDialog() {
 
     // 构造 RunRequest
     const cmdId = crypto.randomUUID()
-    const finalArgs = templateToAdbArgs(command.template, values)
+    const finalArgs = templateToCommandArgs(command.template, values)
 
     const request: RunRequest = { cmdId, commandId: command.id, resolvedArgs: finalArgs }
 
@@ -160,6 +156,7 @@ export default function ParamDialog() {
             <ParamField
               key={p.key}
               param={p}
+              multiline={command.id === 'adb_shell' && p.key === 'cmd'}
               value={values[p.key] || ''}
               error={errors[p.key]}
               onChange={handleChange}

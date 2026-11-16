@@ -26,8 +26,8 @@ describe('buildLogExportText', () => {
     const result = buildLogExportText(
       ['one', 'two'], 'desc',
       new Map([
-        ['one', { lineIds: ['a'] }],
-        ['two', { lineIds: ['b', 'system'] }],
+      ['one', { lineIds: ['a'] }],
+        ['two', { lineIds: ['b', 'system'], commandLabel: '第二条命令', resolvedCommand: 'adb shell second' }],
       ]),
       new Map([
         ['a', { raw: '\u001b[31mfirst\u001b[0m', stream: 'stdout' }],
@@ -35,6 +35,6 @@ describe('buildLogExportText', () => {
         ['system', { raw: 'ignored', stream: 'system' }],
       ]),
     )
-    expect(result).toBe('second\n\n----------------------------------------\n\n\u001b[31mfirst\u001b[0m')
+    expect(result).toBe('命令: adb shell second\nsecond\n\n----------------------------------------\n\n命令: one\n\u001b[31mfirst\u001b[0m')
   })
 })

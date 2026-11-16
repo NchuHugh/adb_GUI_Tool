@@ -9,8 +9,10 @@ import fs from 'fs'
 import { ConfigLoader } from './configLoader'
 import { AdbRunner, checkAdbAvailability, setAdbAvailable } from './adbRunner'
 import { DevicePoller } from './devicePoller'
+import { registerDeviceShell } from './deviceShell'
+import { MAX_LOG_FILE_BYTES } from '../src/utils/logArchive'
 import { IPC_CHANNELS } from '../src/types'
-import { templateToAdbArgs } from '../src/utils/argParser'
+import { getAdbDeviceArgs, getCommandTool, templateToCommandArgs } from '../src/utils/argParser'
 
 // 设为 true 可打开 DevTools
 const isDev = !app.isPackaged
@@ -40,6 +42,29 @@ function createWindow() {
     },
   })
   mainWindow.setMenuBarVisibility(false)
+  mainWindow.webContents.setWindowOpenHandler(({ url, frameName }) => {
+    if (url !== 'about:blank' || frameName !== 'adb-gui-console') return { action: 'deny' }
+    return {
+      action: 'allow',
+      overrideBrowserWindowOptions: {
+        width: 1120,
+        height: 640,
+        minWidth: 900,
+        minHeight: 300,
+        autoHideMenuBar: true,
+        webPreferences: { contextIsolation: true, nodeIntegration: false, sandbox: true },
+      },
+    }
+  })
+
+  const owner = mainWindow
+  owner.webContents.on('did-create-window', child => {
+    owner.webContents.setBackgroundThrottling(false)
+    child.webContents.on('will-navigate', event => event.preventDefault())
+    child.on('closed', () => {
+      if (!owner.isDestroyed()) owner.webContents.setBackgroundThrottling(true)
+    })
+  })
 
   // 加载页面
   if (isDev && process.env.VITE_DEV_SERVER_URL) {
@@ -56,6 +81,8 @@ function createWindow() {
 }
 
 function registerIpcHandlers() {
+  registerDeviceShell(() => mainWindow, () => devicePoller.getSelectedSerial())
+
   // 返回命令配置列表
   ipcMain.handle(IPC_CHANNELS.COMMANDS_LIST, async () => {
     return configLoader.getConfig()
@@ -66,7 +93,8 @@ function registerIpcHandlers() {
     const deviceSerial = devicePoller.getSelectedSerial()
     const command = configLoader.getConfig().commands.find(c => c.id === request.commandId)
     const timeoutMs = command?.timeout ?? 30000
-    await adbRunner.run(request, deviceSerial, mainWindow!, timeoutMs)
+    if (!command || command.invalid || !mainWindow) throw new Error('命令不可用')
+    await adbRunner.run(request, deviceSerial, mainWindow, timeoutMs, getCommandTool(command.template))
   })
 
   // 中止命令
@@ -145,16 +173,23 @@ function registerIpcHandlers() {
 
     const deviceSerial = devicePoller.getSelectedSerial()
     return new Promise((resolve) => {
-      const args: string[] = []
-      if (deviceSerial) args.push('-s', deviceSerial)
-      args.push(...templateToAdbArgs(command.template))
+      const tool = getCommandTool(command.template)
+      const commandArgs = templateToCommandArgs(command.template)
+      const args = tool === 'adb' ? getAdbDeviceArgs(commandArgs, deviceSerial) : commandArgs
 
       const { spawn } = require('child_process')
-      const proc = spawn('adb', args, { windowsHide: true, stdio: ['ignore', 'pipe', 'pipe'] })
+      const proc = spawn(tool, args, { windowsHide: true, stdio: ['ignore', 'pipe', 'pipe'] })
 
       let output = ''
-      proc.stdout?.on('data', (d: Buffer) => { output += d.toString() })
-      proc.stderr?.on('data', (d: Buffer) => { output += d.toString() })
+      const appendOutput = (chunk: string) => {
+        output += chunk
+        if (output.length <= 262_144) return
+        clearTimeout(timer)
+        proc.kill()
+        resolve({ success: false, output: '命令输出超过一键填入的容量限制', exitCode: -1 })
+      }
+      proc.stdout?.setEncoding('utf8').on('data', appendOutput)
+      proc.stderr?.setEncoding('utf8').on('data', appendOutput)
 
       const timeoutMs = Math.min(command.timeout || 10000, 10000) // 最大 10 秒
       const timer = setTimeout(() => {
@@ -231,17 +266,43 @@ function registerIpcHandlers() {
     try { const result = configLoader.deleteGroup(id); return { success: true, ...result } }
     catch (err: any) { return { success: false, error: err.message } }
   })
-  ipcMain.handle(IPC_CHANNELS.LOG_EXPORT, async (_event, text: string) => {
-    if (!mainWindow) return { canceled: true }
+  ipcMain.handle(IPC_CHANNELS.LOG_OPEN, async () => {
+    const owner = BrowserWindow.getFocusedWindow() ?? mainWindow
+    if (!owner) return null
+
     try {
-      const result = await dialog.showSaveDialog(mainWindow, {
+      const result = await dialog.showOpenDialog(owner, {
+        title: '打开日志文件',
+        filters: [{ name: 'ADB GUI 日志', extensions: ['log'] }],
+        properties: ['openFile'],
+      })
+      const filePath = result.filePaths[0]
+      if (result.canceled || !filePath) return null
+      if (path.extname(filePath).toLowerCase() !== '.log') {
+        return { error: '请选择 ADB GUI 导出的 .log 文件' }
+      }
+      const stats = await fs.promises.stat(filePath)
+      if (!stats.isFile()) return { error: '请选择日志文件' }
+      if (stats.size > MAX_LOG_FILE_BYTES) return { error: '日志文件超过 128 MB，无法打开' }
+      const text = await fs.promises.readFile(filePath, 'utf8')
+      return { name: path.basename(filePath), text }
+    } catch (error) {
+      return { error: error instanceof Error ? error.message : '无法打开日志文件' }
+    }
+  })
+
+  ipcMain.handle(IPC_CHANNELS.LOG_EXPORT, async (_event, text: string) => {
+    const owner = BrowserWindow.getFocusedWindow() ?? mainWindow
+    if (!owner) return { canceled: true }
+    try {
+      const result = await dialog.showSaveDialog(owner, {
         title: '导出日志',
         defaultPath: 'adb-log.log',
         filters: [{ name: '日志文件', extensions: ['log'] }],
       })
       if (result.canceled || !result.filePath) return { canceled: true }
       const filePath = result.filePath.toLowerCase().endsWith('.log') ? result.filePath : `${result.filePath}.log`
-      fs.writeFileSync(filePath, text, 'utf-8')
+      await fs.promises.writeFile(filePath, text, 'utf-8')
       return { canceled: false, path: filePath }
     } catch (err: any) {
       return { canceled: false, error: err.message }

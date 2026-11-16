@@ -5,6 +5,10 @@ import renderer from 'vite-plugin-electron-renderer'
 import path from 'path'
 
 export default defineConfig({
+  root: path.resolve(__dirname, '..'),
+  css: {
+    postcss: __dirname,
+  },
   plugins: [
     react(),
     electron([
@@ -41,7 +45,7 @@ export default defineConfig({
   },
   resolve: {
     alias: {
-      '@': path.resolve(__dirname, 'src'),
+      '@': path.resolve(__dirname, '../src'),
     },
   },
 })
